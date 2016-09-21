@@ -59,7 +59,7 @@
  netmask 255.255.255.0
  network 10.0.0.0
 ```
-![This is where a screenshot should go](screenshots/virtualbox_installed/virtualbox_installed01.jpg "this is a description")
+![This is where a screenshot should go](screenshots/network_setup/network_setup05.jpg "this is a description")
 6. After adding this, reenter command mode by hitting 'esc', then type :wq to write-quit aka save it.
 7. Next we need to edit our hosts file found at /etc/hosts. so enter the command vi /etc/hosts to begin editing it.
 8. Below where it says 'local hosts', comment out the existing address for node1 (or whatever you called this VM). Then add the following:
@@ -69,4 +69,5 @@
  10.0.0.3 node3.home node3
  10.0.0.4 node4.home node4
 ```
+![This is where a screenshot should go](screenshots/network_setup/network_setup08.jpg "this is a description")
 9. Save those changes and return to the command line. Now comes the tedious part. You will need to edit these files on all 4 VMs. You can either repeat the above 8 steps 3 more times or try something fancy involving scp.
