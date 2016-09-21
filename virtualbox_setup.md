@@ -6,7 +6,8 @@
 * You can download VirtualBox here: https://www.virtualbox.org/wiki/Downloads
  
 1. Run the setup file and it should walk you through a pretty standard installation
-2. Congratulations, VirtualBox is installed.
+2. Congratulations, VirtualBox is installed. When you run VirtualBox it should look something like this:
+!(screenshots/virtualbox_installed/virtualbox_installed01)
 
 ## Creating a new Virtual Machine
 * Ultimately, we want install Ubuntu Server on a VM, but first we have to create a blank VM VirtualBox and alter some settings
