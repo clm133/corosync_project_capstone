@@ -7,7 +7,7 @@
  
 1. Run the setup file and it should walk you through a pretty standard installation
 2. Congratulations, VirtualBox is installed. When you run VirtualBox it should look something like this:
-![This is where a screenshot should go](screenshots/virtualbox_installed/virtualbox_installed01 "this is a description")
+![This is where a screenshot should go](NetApp-Capstone-f2016/screenshots/virtualbox_installed/virtualbox_installed01.jpg "this is a description")
 
 ## Creating a new Virtual Machine
 * Ultimately, we want install Ubuntu Server on a VM, but first we have to create a blank VM VirtualBox and alter some settings
