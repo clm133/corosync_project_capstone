@@ -51,13 +51,14 @@
 8. You will then be asked if you want to encrypt your home directory. Just enter 'no'.
 9. Ubuntu will ask you if the timezone it thinks you are in is correct. Just enter 'yes'
 10. Ubuntu will then ask you for a partitioning method. Just enter 'Guided - use entire disk'. Ubuntu will also ask you to confirm the  partition disk. Confirm it and move on. Then it will ask you if you want to write changes to disk, enter 'yes'.
-![This is where a screenshot should go](screenshots/ubuntu_install/ubuntu_install12.jpg)
-![This is where a screenshot should go](screenshots/ubuntu_install/ubuntu_install13.jpg)
+![This is where a screenshot should go](screenshots/ubuntu_install/ubuntu_install 12.jpg)
+![This is where a screenshot should go](screenshots/ubuntu_install/ubuntu_install 13.jpg)
 11. Ubnutu will ask you if you are using a proxy. You probably arn't, so just leave this blank and enter 'continue'.
 ![This is where a screenshot should go](screenshots/ubuntu_install/ubuntu_install14.jpg)
 12. Ubuntu will ask you how to manage updates, choose 'no automatic updates' and continue. Ubuntu will ask if you want to install some commonly used software; we don't need to quite yet, so don't select anything and enter 'continue'.
-13. We are almost done! Enter 'yes' when asked to install the GRUB boot loader.
+13. We are almost done! Enter 'yes' when asked to install the GRUB boot loader. Once installed it will prompt a reboot.
 14. Congratulations, Ubuntu is installed on this VM.
+![This is where a screenshot should go](screenshots/ubuntu_install/ubuntu_install17.jpg)
 
 ## Setting Up Our Internal Network To Use Static IP Addresses
 * Before starting to set up our network, we obviously need more than one VM. Repeat the 'Creating a New Virtual Machine' and 'Installing Ubuntu Server 14.04.5 LTS on a VM' 3 more times until you have 4 VMs with Ubuntu installed.
