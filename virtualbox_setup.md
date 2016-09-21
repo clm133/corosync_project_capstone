@@ -51,8 +51,8 @@
 2. Next, enter the command 'sudo -i' and provide your password. We will be editing a lot of important files during this process, and this command will save you the headache of having to put sudo before every command and entering your password everytime you want to chnage something.
 3. Next, type ifconfig. You should see an overview of the network interfaces. eth0 is your bridged adapter that you made earlier. You might notice that eth1 is missing. Thats fine, we are changing that in just a minute.
 4. We need to edit the the network interface file located in /etc/network/interfaces. use the command vi /etc/network/interfaces to begin editing the file.
-4a. If you are unfamiliar with the default editor vi, it is pretty simple: there are two modes, command mode (the mode you begin in) and insert mode(the mode you use to actually type something). While in command mode you can move the cursor with the arrow keys, and when it is in a place you'd like to start editing hit the 'i' key to enter insert mode. To reenter command mode hit 'esc' key. To save and quit, while in command mode type :wq (write quit). to leave without saving just type :q.  
-5.  Add the following to the end of the /etc/network/interfaces file:
+5. If you are unfamiliar with the default editor vi, it is pretty simple: there are two modes, command mode (the mode you begin in) and insert mode(the mode you use to actually type something). While in command mode you can move the cursor with the arrow keys, and when it is in a place you'd like to start editing hit the 'i' key to enter insert mode. To reenter command mode hit 'esc' key. To save and quit, while in command mode type :wq (write quit). to leave without saving just type :q.  
+6.  Add the following to the end of the /etc/network/interfaces file:
 ```code
  auto eth1
  iface eth1 inet static
@@ -62,9 +62,9 @@
 ```
 ![This is where a screenshot should go](screenshots/network_setup/network_setup05.jpg "this is a description")
 
-6. After adding this, reenter command mode by hitting 'esc', then type :wq to write-quit aka save it.
-7. Next we need to edit our hosts file found at /etc/hosts. so enter the command vi /etc/hosts to begin editing it.
-8. Below where it says 'local hosts', comment out the existing address for node1 (or whatever you called this VM). Then add the following:
+7. After adding this, reenter command mode by hitting 'esc', then type :wq to write-quit aka save it.
+8. Next we need to edit our hosts file found at /etc/hosts. so enter the command vi /etc/hosts to begin editing it.
+9. Below where it says 'local hosts', comment out the existing address for node1 (or whatever you called this VM). Then add the following:
 ```code
  10.0.0.1 node1.home node1
  10.0.0.2 node2.home node2
@@ -73,4 +73,4 @@
 ```
 ![This is where a screenshot should go](screenshots/network_setup/network_setup08.jpg "this is a description")
 
-9. Save those changes and return to the command line. Now comes the tedious part. You will need to edit these files on all 4 VMs. You can either repeat the above 8 steps 3 more times or try something fancy involving scp.
+10. Save those changes and return to the command line. Now comes the tedious part. You will need to edit these files on all 4 VMs. You can either repeat the above 8 steps 3 more times or try something fancy involving scp.
