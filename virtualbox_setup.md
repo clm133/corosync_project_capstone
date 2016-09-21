@@ -52,20 +52,20 @@
 4. We need to edit the the network interface file located in /etc/network/interfaces. use the command vi /etc/network/interfaces to begin editing the file.
 4a. If you are unfamiliar with the default editor vi, it is pretty simple: there are two modes, command mode (the mode you begin in) and insert mode(the mode you use to actually type something). While in command mode you can move the cursor with the arrow keys, and when it is in a place you'd like to start editing hit the 'i' key to enter insert mode. To reenter command mode hit 'esc' key. To save and quit, while in command mode type :wq (write quit). to leave without saving just type :q.  
 5.  Add the following to the end of the /etc/network/interfaces file:
- ```code
+```code
  auto eth1
  iface eth1 inet static
  address 10.0.0.1 #this is an arbitrary static address we are giving to this node, for each n node this needs to change to 10.0.0.n
  netmask 255.255.255.0
  network 10.0.0.0
- ```
+```
 6. After adding this, reenter command mode by hitting 'esc', then type :wq to write-quit aka save it.
 7. Next we need to edit our hosts file found at /etc/hosts. so enter the command vi /etc/hosts to begin editing it.
 8. Below where it says 'local hosts', comment out the existing address for node1 (or whatever you called this VM). Then add the following:
- ```code
-10.0.0.1 node1.home node1
-10.0.0.2 node2.home node2
-10.0.0.3 node3.home node3
-10.0.0.4 node4.home node4
+```code
+ 10.0.0.1 node1.home node1
+ 10.0.0.2 node2.home node2
+ 10.0.0.3 node3.home node3
+ 10.0.0.4 node4.home node4
 ```
 9. Save those changes and return to the command line. Now comes the tedious part. You will need to edit these files on all 4 VMs. You can either repeat the above 8 steps 3 more times or try something fancy involving scp.
