@@ -48,7 +48,7 @@
 * Before starting to set up our network, we obviously need more than one VM. Repeat the 'Creating a New Virtual Machine' and 'Installing Ubuntu Server 14.04.5 LTS on a VM' 3 more times until you have 4 VMs with Ubuntu installed.
 
 1. Start by powering on your first VM. I will refer to them as nodeN from now on. Once Node1 is powered on, you will need to login with the username and password you provided during installation. 
-2. Next, enter the command 'sudo -i' and provide your password. We will be editing a lot of important files during this process, and this command will save you the headache of having to put sudo before every command and entering your password everytime you want to chnage something.
+2. Next, enter the command 'sudo -i' and provide your password. We will be editing a lot of important files during this process, and this command will save you the headache of having to put sudo before every command and entering your password everytime you want to change something.
 3. Next, type ifconfig. You should see an overview of the network interfaces. eth0 is your bridged adapter that you made earlier. You might notice that eth1 is missing. Thats fine, we are changing that in just a minute.
 4. We need to edit the the network interface file located in /etc/network/interfaces. use the command vi /etc/network/interfaces to begin editing the file.
 5. If you are unfamiliar with the default editor vi, it is pretty simple: there are two modes, command mode (the mode you begin in) and insert mode(the mode you use to actually type something). While in command mode you can move the cursor with the arrow keys, and when it is in a place you'd like to start editing hit the 'i' key to enter insert mode. To reenter command mode hit 'esc' key. To save and quit, while in command mode type :wq (write quit). to leave without saving just type :q.  
@@ -78,5 +78,6 @@
 12. First, in each VM enter the command ifup eth1. 
 13. Then enter the command ifconfig again and now you should see our eth1 network!
 14. Then from each node, try to ping the other nodes by their host name. In this example, from VM node1 I entered the command ping node4. You should recieve confirmation that packets were transmitted (hit 'ctrl' + 'c' to stop the ping). Most importantly, make sure the ip address in parenthesis next to the name is the same static ip address we set up earlier. 
+![This is where a screenshot should go](screenshots/network_setup/network_setup09.jpg "this is a description")
 15. Finally, make sure you still have access to the internet through eth0. just ping www.google.com and see if you get anything.
 16. Congratulations! our network is setup!
