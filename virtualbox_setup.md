@@ -74,3 +74,9 @@
 ![This is where a screenshot should go](screenshots/network_setup/network_setup08.jpg "this is a description")
 
 10. Save those changes and return to the command line. Now comes the tedious part. You will need to edit these files on all 4 VMs. You can either repeat the above 8 steps 3 more times or try something fancy involving scp.
+11. Once the /etc/network/interfaces file and the /etc/hosts file have been edited on all machines, we are ready to test the network!
+12. First, in each VM enter the command ifup eth1. 
+13. Then enter the command ifconfig again and now you should see our eth1 network!
+14. Then from each node, try to ping the other nodes by their host name. In this example, from VM node1 I entered the command ping node4. You should recieve confirmation that packets were transmitted (hit 'ctrl' + 'c' to stop the ping). Most importantly, make sure the ip address in parenthesis next to the name is the same static ip address we set up earlier. 
+15. Finally, make sure you still have access to the internet through eth0. just ping www.google.com and see if you get anything.
+16. Congratulations! our network is setup!
