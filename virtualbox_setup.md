@@ -46,6 +46,7 @@
 
 ## Setting Up Our Internal Network To Use Static IP Addresses
 * Before starting to set up our network, we obviously need more than one VM. Repeat the 'Creating a New Virtual Machine' and 'Installing Ubuntu Server 14.04.5 LTS on a VM' 3 more times until you have 4 VMs with Ubuntu installed.
+
 1. Start by powering on your first VM. I will refer to them as nodeN from now on. Once Node1 is powered on, you will need to login with the username and password you provided during installation. 
 2. Next, enter the command 'sudo -i' and provide your password. We will be editing a lot of important files during this process, and this command will save you the headache of having to put sudo before every command and entering your password everytime you want to chnage something.
 3. Next, type ifconfig. You should see an overview of the network interfaces. eth0 is your bridged adapter that you made earlier. You might notice that eth1 is missing. Thats fine, we are changing that in just a minute.
@@ -60,6 +61,7 @@
  network 10.0.0.0
 ```
 ![This is where a screenshot should go](screenshots/network_setup/network_setup05.jpg "this is a description")
+
 6. After adding this, reenter command mode by hitting 'esc', then type :wq to write-quit aka save it.
 7. Next we need to edit our hosts file found at /etc/hosts. so enter the command vi /etc/hosts to begin editing it.
 8. Below where it says 'local hosts', comment out the existing address for node1 (or whatever you called this VM). Then add the following:
@@ -70,4 +72,5 @@
  10.0.0.4 node4.home node4
 ```
 ![This is where a screenshot should go](screenshots/network_setup/network_setup08.jpg "this is a description")
+
 9. Save those changes and return to the command line. Now comes the tedious part. You will need to edit these files on all 4 VMs. You can either repeat the above 8 steps 3 more times or try something fancy involving scp.
