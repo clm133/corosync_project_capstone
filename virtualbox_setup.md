@@ -100,4 +100,8 @@
 16. Congratulations! our network is setup!
 
 ## Getting Corosync and Pacemaker installed
-* This section is still under construction. I primarily followed this guide: http://clusterlabs.org/quickstart-ubuntu.html to get things running. I will flesh this out further later.
+* This section is still under construction. I primarily followed these three guides to get things running:
+ * http://clusterlabs.org/quickstart-ubuntu.html
+ * http://angryelectron.com/corosync-on-ubuntu1204/
+ * http://blog.netinstall.net/2014/09/pacemaker-and-corosync-ha-2-node-setup.html
+* I will flesh this section out soon, hopefully unifying these into a single process, but if you wanted to get a head start read the links above. 
