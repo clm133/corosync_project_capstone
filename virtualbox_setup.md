@@ -105,6 +105,7 @@
  * http://angryelectron.com/corosync-on-ubuntu1204/
  * http://blog.netinstall.net/2014/09/pacemaker-and-corosync-ha-2-node-setup.html
 * I will flesh this section out soon, hopefully unifying these into a single process, but if you wanted to get a head start read the links above. 
+
 ### Tentative corosync/pacemaker installation guide
  * First you will want to install pacemaker and corosync. To do this, use the command apt-get install corosync pacemaker fence-agents
  * Next you'll need to configure a cluster.conf file located in /etc/cluster/cluster.conf
