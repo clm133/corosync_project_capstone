@@ -152,6 +152,17 @@
 * Notice the attributes name and port have values of "nodeN". These are the host names that we configured earlier. If you did not use node1, node2, node3, node4 as your host name, you should replace those valuse with the host names you did use.
 * The cluster.conf file has to be written on every node of the cluster. This obviously would be tedious to do with vi, so you can use ssh and putty to copy/paste this file in each node. You could also write the file in one node and ssh it to all the others. If you want to use ssh, you can install it on a VM with the command: apt-get install openssh-client openssh-server
 * You can then use putty to remotely login to your VM and copy/paste the cluster.conf code above. To do this, first enter the command ifconfig to see the ip address used by eth0. Then in putty, under hostname, provide that ip address and you should be able to remotely login to your virtual machine --cool! Then copy/paste the code above into /etc/cluster.conf
-* After all machines have the cluster.conf file, you need to configure corosync's network binding. To do this, you'll want to edit the corosync config file (I imagine this will be a file we will be modifying a lot for this project). Use vi /etc/corosync/corosync.conf to access the the file. Comment out where it currently says bindnetaddr, then on the next line add: bindnetaddr: 10.0.0.0
-* Write-quit and you are done.
-* 
+* After all machines have the cluster.conf file, you need to configure corosync's network binding.
+* To do this, you'll want to edit the corosync config file (I imagine this will be a file we will be modifying a lot for this project so get familiar with it).
+* Use vi /etc/corosync/corosync.conf to access the the file. Comment out where it currently says bindnetaddr, then on the next line add: 'bindnetaddr: 10.0.0.0'
+* also, at the top of the corosync.conf file, add the following:
+	```code
+	service {
+		ver:       0
+  		name:      pacemaker
+	}
+	```
+* This tells corosync to run pacemaker automatically, so you don't have to manually turn it on.
+* Add these changes to every node and we are finally done. 
+* enter the command corosync -f and VM will begin running corosync. It tells you how many members there are and some other status information. As you enter this command on every VM you should see updates on all machines currently running corosync indicating a new member has been added. cool!
+* You can exit corosync on any given VM by hitting 'ctr + c', and the machines still running it will tell you they've lost a member!
