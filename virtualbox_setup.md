@@ -105,3 +105,53 @@
  * http://angryelectron.com/corosync-on-ubuntu1204/
  * http://blog.netinstall.net/2014/09/pacemaker-and-corosync-ha-2-node-setup.html
 * I will flesh this section out soon, hopefully unifying these into a single process, but if you wanted to get a head start read the links above. 
+### Tentative corosync/pacemaker installation guide
+ * First you will want to install pacemaker and corosync. To do this, use the command apt-get install corosync pacemaker fence-agents
+ * Next you'll need to configure a cluster.conf file located in /etc/cluster/cluster.conf
+ * This gives kind of a basic overview of what the cluster.conf file : http://www.sourceware.org/cluster/doc/cluster_schema.html
+ * For the purposes of just getting corosync running, we need just a barebones cluster.conf file. Here is what I used:
+  ```html
+   <?xml version="1.0"?>
+<cluster config_version="1" name="pacemaker1">
+  <logging debug="off"/>
+  <clusternodes>
+    <clusternode name="node1" nodeid="1">
+      <fence>
+        <method name="pcmk-redirect">
+          <device name="pcmk" port="node1"/>
+        </method>
+      </fence>
+    </clusternode>
+    <clusternode name="node2" nodeid="2">
+      <fence>
+        <method name="pcmk-redirect">
+          <device name="pcmk" port="node2"/>
+        </method>
+      </fence>
+    </clusternode>
+	<clusternode name="node3" nodeid="3">
+      <fence>
+        <method name="pcmk-redirect">
+          <device name="pcmk" port="node3"/>
+        </method>
+      </fence>
+    </clusternode>
+	<clusternode name="node4" nodeid="4">
+      <fence>
+        <method name="pcmk-redirect">
+          <device name="pcmk" port="node4"/>
+        </method>
+      </fence>
+    </clusternode>
+  </clusternodes>
+  <fencedevices>
+    <fencedevice name="pcmk" agent="fence_pcmk"/>
+  </fencedevices>
+</cluster>
+  ```
+* Notice the attributes name and port have values of "nodeN". These are the host names that we configured earlier. If you did not use node1, node2, node3, node4 as your host name, you should replace those valuse with the host names you did use.
+* The cluster.conf file has to be written on every node of the cluster. This obviously would be tedious to do with vi, so you can use ssh and putty to copy/paste this file in each node. You could also write the file in one node and ssh it to all the others. If you want to use ssh, you can install it on a VM with the command: apt-get install openssh-client openssh-server
+* You can then use putty to remotely login to your VM and copy/paste the cluster.conf code above. To do this, first enter the command ifconfig to see the ip address used by eth0. Then in putty, under hostname, provide that ip address and you should be able to remotely login to your virtual machine --cool! Then copy/paste the code above into /etc/cluster.conf
+* After all machines have the cluster.conf file, you need to configure corosync's network binding. To do this, you'll want to edit the corosync config file (I imagine this will be a file we will be modifying a lot for this project). Use vi /etc/corosync/corosync.conf to access the the file. Comment out where it currently says bindnetaddr, then on the next line add: bindnetaddr: 10.0.0.0
+* Write-quit and you are done.
+* 
