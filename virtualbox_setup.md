@@ -111,8 +111,8 @@
  * Next you'll need to configure a cluster.conf file located in /etc/cluster/cluster.conf
  * This gives kind of a basic overview of what the cluster.conf file : http://www.sourceware.org/cluster/doc/cluster_schema.html
  * For the purposes of just getting corosync running, we need just a barebones cluster.conf file. Here is what I used:
-  ```code
-   	<?xml version="1.0"?>
+  ```xml
+	<?xml version="1.0"?>
 	<cluster config_version="1" name="pacemaker1">
 	  <logging debug="off"/>
 	  <clusternodes>
@@ -149,6 +149,7 @@
 	    <fencedevice name="pcmk" agent="fence_pcmk"/>
 	  </fencedevices>
 	</cluster>
+	
   ```
 * Notice the attributes name and port have values of "nodeN". These are the host names that we configured earlier. If you did not use node1, node2, node3, node4 as your host name, you should replace those valuse with the host names you did use.
 * The cluster.conf file has to be written on every node of the cluster. This obviously would be tedious to do with vi, so you can use ssh and putty to copy/paste this file in each node. You could also write the file in one node and ssh it to all the others. If you want to use ssh, you can install it on a VM with the command: apt-get install openssh-client openssh-server
