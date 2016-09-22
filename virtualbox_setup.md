@@ -3,6 +3,7 @@
 1. [Installing Virtual Box](#installing-virtual-box)
 2. [Installing Ubuntu Server 14.04.5 LTS on a VM](#installing-ubuntu-server-14045-lts-on-a-vm)
 3. [Setting Up Our Internal Network To Use Static IP Addresses](#setting-up-our-internal-network-to-use-static-ip-addresses)
+4. [Getting Corosync and Pacemaker installed](#getting-corosync-and-pacemaker-installed)
 
 ## Installing Virtual Box
 * We are using Oracle VirtualBox 5.1.6 to run four virtual servers. 
@@ -97,3 +98,6 @@
 ![This is where a screenshot should go](screenshots/network_setup/network_setup09.jpg "this is a description")
 15. Finally, make sure you still have access to the internet through eth0. just ping www.google.com and see if you get anything.
 16. Congratulations! our network is setup!
+
+## Getting Corosync and Pacemaker installed
+* This section is still under construction. I primarily followed this guide: http://clusterlabs.org/quickstart-ubuntu.html to get things running. I will flesh this out further later.
