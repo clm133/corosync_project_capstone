@@ -27,7 +27,7 @@
 7. You should return to the main VirtualBox window your newly created VM listed along the lefthand side.
 8. Right-click on the VM you just created and select Settings from the dropdown menu that appears.
 ![This is where a screenshot should go](screenshots/blank_VM/blank_VM08.jpg)
-9. In the settings menu, navigate to the Network options. Under the Adapter 1 tab, change the 'Attached to' selection to 'Bridged Adapter'. 
+9. In the settings menu, navigate to the Network options. Under the Adapter 1 tab, change the 'Attached to' selection to 'Bridged Adapter'. This adapter, called eth0 in Ubuntu, will be your VM's connection to the internet. It doesn't even necessarily have to be a 'bridged adapter'. If Ubuntu is unable to establish an internet connection with the 'bridged adapter' setting, you can try changing the 'attached to' setting from 'bridged adapter' to 'NAT', which should also provide your VM a connection to the internet.
 ![This is where a screenshot should go](screenshots/blank_VM/blank_VM09.jpg)
 10. While still in the Network menu, change to the Adapter 2 tab. Check the 'Enable Network Adapter Box', and change the 'Attached to' selection to 'Internal Network'. A text box for naming this network appears, you can name it whatever you want, but make sure that all the other VMs you create use this same name for its internal network.
 ![This is where a screenshot should go](screenshots/blank_VM/blank_VM10.jpg)
@@ -61,10 +61,10 @@
 14. Congratulations, Ubuntu is installed on this VM.
 ![This is where a screenshot should go](screenshots/ubuntu_install/ubuntu_install17.jpg)
 
-## Setting Up Our Internal Network To Use Static IP Addresses
+## Setting Up our Internal Network To Use Static IP Addresses
 * Before starting to set up our network, we obviously need more than one VM. Repeat the 'Creating a New Virtual Machine' and 'Installing Ubuntu Server 14.04.5 LTS on a VM' 3 more times until you have 4 VMs with Ubuntu installed.
 
-1. Start by powering on your first VM. I will refer to them as nodeN from now on. Once Node1 is powered on, you will need to login with the username and password you provided during installation. 
+1. Start by powering on your first VM. I will refer to them as nodeN from now on. Once node1 is powered on, you will need to login with the username and password you provided during installation. 
 2. Next, enter the command 'sudo -i' and provide your password. We will be editing a lot of important files during this process, and this command will save you the headache of having to put sudo before every command and entering your password everytime you want to change something.
 3. Next, type ifconfig. You should see an overview of the network interfaces. eth0 is your bridged adapter that you made earlier. You might notice that eth1 is missing. Thats fine, we are changing that in just a minute.
 4. We need to edit the the network interface file located in /etc/network/interfaces. use the command vi /etc/network/interfaces to begin editing the file.
