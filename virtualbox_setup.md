@@ -100,10 +100,12 @@
 16. Congratulations! our network is setup!
 
 ## Getting Corosync and Pacemaker installed
-* This section is still under construction. I primarily followed these three guides to get things running:
+* This section is still under construction. These were the resources I used:
  * http://clusterlabs.org/quickstart-ubuntu.html
  * http://angryelectron.com/corosync-on-ubuntu1204/
  * http://blog.netinstall.net/2014/09/pacemaker-and-corosync-ha-2-node-setup.html
+ * https://syshell.net/2014/08/26/pacemaker-configure-cluster/
+ * http://clusterlabs.org/wiki/Initial_Configuration
 * I will flesh this section out soon, hopefully unifying these into a single process, but if you wanted to get a head start read the links above. 
 
 ### Tentative corosync/pacemaker installation guide
@@ -164,7 +166,11 @@
   		name:      pacemaker
 	}
 	```
-* This tells corosync to run pacemaker automatically, so you don't have to manually turn it on.
-* Add these changes to every node and we are finally done. 
-* enter the command corosync -f and VM will begin running corosync. It tells you how many members there are and some other status information. As you enter this command on every VM you should see updates on all machines currently running corosync indicating a new member has been added. cool!
+* This tells corosync to run pacemaker automatically, so you don't have to manually turn it on (this apparently doesn't exactly work, as we still have to turn pacemaker on). Add these changes to every node.
+* You can check that things are proceeding along correctly by entering the command corosync -f which will prompt the VM to begin running corosync. It tells you how many members there are and some other status information. As you enter this command on every VM you should see updates on all machines currently running corosync indicating a new member has been added. cool!
 * You can exit corosync on any given VM by hitting 'ctr + c', and the machines still running it will tell you they've lost a member!
+* That said, Corosync is only part of our cluster infrastructure, we also need to set up pacemaker to get the cluster up and totally running. 
+* For the purposes of resolving a strange bug with ubuntu, edit the file /etc/default/corosync and change where it says "START=no" to "START=yes". 
+* Next, enter: "/etc/init.d/corosync start". You should receive some confirmation that it started.
+* Then, enter: "/etc/init.d/pacemaker start". You should receive some confirmation that it started.
+* Now you can check the status of the cluster with "crm_mon -1". 
