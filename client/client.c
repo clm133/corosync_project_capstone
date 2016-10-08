@@ -1,5 +1,3 @@
-/*Sprint1*/
-
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -41,39 +39,30 @@ int ui(){
 	if (choice == 1) {
 		single_node_state();
 	}
-
 	if (choice == 2) {
-
 		cluster_health();
 	}
 }
 
-/*Connect to the Corosync process*/
+/*
+Connect to the Corosync process
+*/
 void connect_corosync(){
 
-
-
-
 }
+
 /*
 Get the status of a single node
 */
 void single_node_state(){
-	// see pacemaker documents
-	system("crm_mon");
+
 	printf("\n");
-
-
 }
 
 /*
 Get the cluster's health
 */
 void cluster_health(){
-	// see pacemaker documents
-	system("crm_mon -n");
+	system("corosync-quorumtool");
 	printf("\n");
-
-
-
 }
