@@ -62,10 +62,10 @@ int ui(){
 	printf("1. Show cluster's membership\n");
 	printf("2. Show cluster health\n");
 	if(clusterEstablished){
-		printf("3. Add node to cluster");
+		printf("3. Add node to cluster\n");
 	}
 	else{
-		printf("3. Establish Cluster");
+		printf("3. Establish Cluster\n");
 	}
 	printf("0. Exit\n");
 	printf("-------------------------------------\n");
@@ -95,10 +95,10 @@ void add_node_prompt(){
 	
 	buffer = malloc(sizeof(char)*64);
 	if(clusterEstablished){
-		printf("Please enter the hostname of node you would like to add to the cluster.");
+		printf("Please enter the hostname of node you would like to add to the cluster.\n");
 	}
 	else{
-		printf("Please enter the hostname of node you would like to start the cluster with.");
+		printf("Please enter the hostname of node you would like to start the cluster with.\n");
 	}
 	scanf("%s", buffer);
 	//eventually we will want to add some input handling here
@@ -119,7 +119,8 @@ void add_node(char *hostname){
 	strcpy(command, SSH);
 	strcat(command, hostname);
 	strcat(command, CORO_START);
-	system(command);
+	printf("This is the command you are running: %s", command);
+	//system(command);
 	
 	if(clusterEstablished){
 		end->next = node;
