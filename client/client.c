@@ -3,7 +3,7 @@
 #include <string.h>
 
 //some constants for commands
-#deiine SSH "ssh root@"
+#define SSH "ssh root@"
 #define CORO_START "corosync"
 #define CORO_MEMBERSHIP "corosync-cmapctl | grep member"
 #define CORO_HEALTH "corosync-cfgtool -s"
@@ -18,9 +18,10 @@
 typedef int boolean;
 
 /* This struct holds node information */
-struct typedef ClusterNode {
-	uint32_t node_id;
-	char[64] hostname; //relative to client machine
+typedef struct ClusterNode ClusterNode;
+struct ClusterNode {
+	unsigned int node_id;
+	char *hostname; //relative to client machine
 	ClusterNode *next; // to store our cluster as a linked list
 } ;
 
@@ -29,8 +30,10 @@ ClusterNode *cluster; // a pointer to start of cluster node linked list
 ClusterNode *end; // a pointer to end of cluster node linked list
 
 int ui();
+void add_node_prompt();
 void add_node();
 void single_node_state();
+void cluster_membership();
 void cluster_health();
 
 
@@ -111,15 +114,16 @@ void add_node(char *hostname){
 	char *command;
 	
 	node = malloc(sizeof(ClusterNode));
+	node->hostname = strdup(hostname);
 	command = malloc(sizeof(char)*256);
-	strcpy(node.hostname, hostname);
 	strcpy(command, SSH);
 	strcat(command, hostname);
 	strcat(command, CORO_START);
 	system(command);
+	
 	if(clusterEstablished){
-		end.next = node;
-		end = end.next;
+		end->next = node;
+		end = end->next;
 	}
 	else{
 		cluster = node;
@@ -144,7 +148,7 @@ void cluster_membership()
 	char *command;
 	command = malloc(sizeof(char)*256);
 	strcpy(command, SSH);
-	strcat(command, cluster.hostname);
+	strcat(command, cluster->hostname);
 	strcat(command, CORO_MEMBERSHIP);
 	system(command);
 	printf("\n");
@@ -158,7 +162,7 @@ void cluster_health(){
 	char *command;
 	command = malloc(sizeof(char)*256);
 	strcpy(command, SSH);
-	strcat(command, cluster.hostname);
+	strcat(command, cluster->hostname);
 	strcat(command, CORO_HEALTH);
 	system(command);
 	printf("\n");
