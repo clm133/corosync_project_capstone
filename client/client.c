@@ -83,10 +83,9 @@ int ui(){
 	}
 	else if (choice == 3) {
 		add_node_prompt();
-		printf("returned to ui()\n");
 	}
 	else{
-		printf("invalid selection\n")
+		printf("invalid selection\n");
 	}
 }
 
@@ -107,7 +106,6 @@ void add_node_prompt(){
 	scanf("%s", buffer);
 	//eventually we will want to add some input handling here
 	add_node(buffer);
-	printf("returned to add_node_prompt()\n");
 	free(buffer);
 }
 
@@ -125,7 +123,6 @@ void add_node(char *hostname){
 	strcat(command, hostname);
 	strcat(command, " ");
 	strcat(command, CORO_START);
-	printf("This is the command you are running: %s", command);
 	system(command);
 	
 	if(clusterEstablished){
@@ -156,6 +153,7 @@ void cluster_membership()
 	command = malloc(sizeof(char)*256);
 	strcpy(command, SSH);
 	strcat(command, cluster->hostname);
+	strcat(command, " ");
 	strcat(command, CORO_MEMBERSHIP);
 	system(command);
 	printf("\n");
@@ -170,6 +168,7 @@ void cluster_health(){
 	command = malloc(sizeof(char)*256);
 	strcpy(command, SSH);
 	strcat(command, cluster->hostname);
+	strcat(command, " ");
 	strcat(command, CORO_HEALTH);
 	system(command);
 	printf("\n");
