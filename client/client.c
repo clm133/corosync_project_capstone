@@ -22,16 +22,19 @@ typedef struct ClusterNode ClusterNode;
 struct ClusterNode {
 	unsigned int node_id;
 	char *hostname; //relative to client machine
+	ClusterNode *prev; 
 	ClusterNode *next; // to store our cluster as a linked list
 } ;
 
 boolean clusterEstablished; 
-ClusterNode *cluster; // a pointer to start of cluster node linked list
-ClusterNode *end; // a pointer to end of cluster node linked list
+ClusterNode *cluster_start; // a pointer to start of cluster node linked list
+ClusterNode *cluster_end; // a pointer to end of cluster node linked list
 
 int ui();
 void add_node_prompt();
 void add_node();
+void remove_node(ClusterNode *node); //the parameter here should probably eventually change to node_id;
+void cluster_destroy();
 void single_node_state();
 void cluster_membership();
 void cluster_health();
@@ -43,6 +46,7 @@ int main(){
 	//display ui
 	while(1){
 		if (ui() == 0){
+			cluster_destroy();
 			exit(0);
 		}
 	}
@@ -67,6 +71,7 @@ int ui(){
 	else{
 		printf("3. Establish Cluster\n");
 	}
+	printf("4. Destroy Cluster\n");
 	printf("0. Exit\n");
 	printf("-------------------------------------\n");
 	printf("\n");
@@ -84,11 +89,15 @@ int ui(){
 	else if (choice == 3) {
 		add_node_prompt();
 	}
+	else if (choice == 4) {
+		cluster_destroy();
+	}
 	else{
 		printf("invalid selection\n");
 	}
+	
+	return choice;
 }
-
 
 /*
 Prompt for adding node by hostname
@@ -115,27 +124,72 @@ Adds a node to the cluster (or establishes one if no cluster exists)
 void add_node(char *hostname){
 	ClusterNode *node;
 	char *command;
-	
+	//malloc for node to add to cluster linked list (remeber the hostname must also be freed when freeing node)
 	node = malloc(sizeof(ClusterNode));
 	node->hostname = strdup(hostname);
+	//create a string to pass to system()
 	command = malloc(sizeof(char)*256);
 	strcpy(command, SSH);
 	strcat(command, hostname);
 	strcat(command, " ");
 	strcat(command, CORO_START);
 	system(command);
-	
+	//Check if we have established cluster yet
 	if(clusterEstablished){
-		end->next = node;
-		end = end->next;
+		//double link list
+		cluster_end->next = node;
+		node->prev = cluster_end;
+		cluster_end = cluster_end->next;
 	}
 	else{
-		cluster = node;
-		end = node;
+		cluster_start = node;
+		cluster_end = node;
 		clusterEstablished = true;
 	}
+	
 	free(command);
 }
+
+/*
+Removes node from the cluster
+*/
+void remove_node(ClusterNode *node)
+{
+	char *command;
+	
+	//shut down corosync on node 
+	command = malloc(sizeof(char)*256);
+	strcpy(command, SSH);
+	strcat(command, node->hostname);
+	strcat(command, " ");
+	strcat(command, CORO_SHUTDOWN);
+	system(command);
+	free(command);
+	
+	//removes node record from linked list, caller function responsible for updating linked list
+	free(node->hostname);
+	free(node);
+}
+
+/*
+Shuts down and removes all nodes in entire cluster
+*/
+void cluster_destroy()
+{
+	ClusterNode *cur;
+	ClusterNode *next;
+	
+	cur = cluster_start;
+	while(cur != cluster_end){
+		next = cur->next;
+		remove_node(cur);
+		cur = next;
+	}
+	remove_node(cur);
+	clusterEstablished = false;
+	printf("Cluster destroyed.\n");
+}
+
 
 /*
 Get the status of a single node
@@ -152,7 +206,7 @@ void cluster_membership()
 	char *command;
 	command = malloc(sizeof(char)*256);
 	strcpy(command, SSH);
-	strcat(command, cluster->hostname);
+	strcat(command, cluster_start->hostname);
 	strcat(command, " ");
 	strcat(command, CORO_MEMBERSHIP);
 	system(command);
@@ -167,7 +221,7 @@ void cluster_health(){
 	char *command;
 	command = malloc(sizeof(char)*256);
 	strcpy(command, SSH);
-	strcat(command, cluster->hostname);
+	strcat(command, cluster_start->hostname);
 	strcat(command, " ");
 	strcat(command, CORO_HEALTH);
 	system(command);
