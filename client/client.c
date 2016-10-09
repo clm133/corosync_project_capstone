@@ -46,7 +46,9 @@ int main(){
 	//display ui
 	while(1){
 		if (ui() == 0){
-			cluster_destroy();
+			if(clusterEstablished){
+				cluster_destroy();
+			}
 			exit(0);
 		}
 	}
