@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-//some constants for commands
+//some constants for system commands
 #define SSH "ssh root@"
 #define CORO_START "corosync"
 #define CORO_MEMBERSHIP "corosync-cmapctl | grep member"
@@ -27,8 +27,8 @@ struct ClusterNode {
 } ;
 
 boolean clusterEstablished; 
-ClusterNode *cluster_start; // a pointer to start of cluster node linked list
-ClusterNode *cluster_end; // a pointer to end of cluster node linked list
+ClusterNode *cluster_head; // a pointer to start of cluster node linked list
+ClusterNode *cluster_tail; // a pointer to end of cluster node linked list
 
 int ui();
 void add_node_prompt();
@@ -36,11 +36,13 @@ void add_node();
 void remove_node(ClusterNode *node); //the parameter here should probably eventually change to node_id;
 void cluster_destroy();
 void single_node_state();
+void cluster_quorum();
 void cluster_membership();
 void cluster_health();
 
 
-int main(){
+int main()
+{
 	//initially no cluster is established
 	clusterEstablished = false; 
 	//display ui
@@ -57,7 +59,8 @@ int main(){
 /*
 Text-based UI for the client
 */
-int ui(){
+int ui()
+{
 	int choice;
 	
 	printf("\n");
@@ -67,13 +70,14 @@ int ui(){
 	printf("Options:\n");
 	printf("1. Show cluster's membership\n");
 	printf("2. Show cluster health\n");
+	printf("3. Show cluster quorum\n");
 	if(clusterEstablished){
-		printf("3. Add node to cluster\n");
+		printf("4. Add node to cluster\n");
 	}
 	else{
-		printf("3. Establish Cluster\n");
+		printf("4. Establish Cluster\n");
 	}
-	printf("4. Destroy Cluster\n");
+	printf("5. Destroy Cluster\n");
 	printf("0. Exit\n");
 	printf("-------------------------------------\n");
 	printf("\n");
@@ -89,9 +93,12 @@ int ui(){
 		cluster_health();
 	}
 	else if (choice == 3) {
-		add_node_prompt();
+		cluster_quorum();
 	}
 	else if (choice == 4) {
+		add_node_prompt();
+	}
+	else if (choice == 5) {
 		cluster_destroy();
 	}
 	else{
@@ -104,7 +111,8 @@ int ui(){
 /*
 Prompt for adding node by hostname
 */
-void add_node_prompt(){
+void add_node_prompt()
+{
 	char *buffer;
 	
 	buffer = malloc(sizeof(char)*64);
@@ -123,7 +131,8 @@ void add_node_prompt(){
 /*
 Adds a node to the cluster (or establishes one if no cluster exists)
 */
-void add_node(char *hostname){
+void add_node(char *hostname)
+{
 	ClusterNode *node;
 	char *command;
 	//malloc for node to add to cluster linked list (remeber the hostname must also be freed when freeing node)
@@ -139,13 +148,13 @@ void add_node(char *hostname){
 	//Check if we have established cluster yet
 	if(clusterEstablished){
 		//double link list
-		cluster_end->next = node;
-		node->prev = cluster_end;
-		cluster_end = cluster_end->next;
+		cluster_tail->next = node;
+		node->prev = cluster_tail;
+		cluster_tail = cluster_tail->next;
 	}
 	else{
-		cluster_start = node;
-		cluster_end = node;
+		cluster_head = node;
+		cluster_tail = node;
 		clusterEstablished = true;
 	}
 	
@@ -181,8 +190,8 @@ void cluster_destroy()
 	ClusterNode *cur;
 	ClusterNode *next;
 	
-	cur = cluster_start;
-	while(cur != cluster_end){
+	cur = cluster_head;
+	while(cur != cluster_tail){
 		next = cur->next;
 		remove_node(cur);
 		cur = next;
@@ -196,8 +205,26 @@ void cluster_destroy()
 /*
 Get the status of a single node
 */
-void single_node_state(){
+void single_node_state()
+{
 	printf("\n");
+}
+
+/*
+Prints current quorum status
+*/
+void cluster_quorum()
+{
+	char *command;
+	
+	command = malloc(sizeof(char)*256);
+	strcpy(command, SSH);
+	strcat(command, cluster_head->hostname);
+	strcat(command, " ");
+	strcat(command, CORO_QUORUM);
+	system(command);
+	printf("\n");
+	free(command);
 }
 
 /*
@@ -206,9 +233,10 @@ Print the cluster membership
 void cluster_membership()
 {
 	char *command;
+	
 	command = malloc(sizeof(char)*256);
 	strcpy(command, SSH);
-	strcat(command, cluster_start->hostname);
+	strcat(command, cluster_head->hostname);
 	strcat(command, " ");
 	strcat(command, CORO_MEMBERSHIP);
 	system(command);
@@ -219,11 +247,13 @@ void cluster_membership()
 /*
 Print cluster's health
 */
-void cluster_health(){
+void cluster_health()
+{
 	char *command;
+	
 	command = malloc(sizeof(char)*256);
 	strcpy(command, SSH);
-	strcat(command, cluster_start->hostname);
+	strcat(command, cluster_head->hostname);
 	strcat(command, " ");
 	strcat(command, CORO_HEALTH);
 	system(command);
