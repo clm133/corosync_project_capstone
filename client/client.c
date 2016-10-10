@@ -33,7 +33,8 @@ ClusterNode *cluster_tail; // a pointer to end of cluster node linked list
 int ui();
 void add_node_prompt();
 void add_node();
-void remove_node(ClusterNode *node); //the parameter here should probably eventually change to node_id;
+void remove_node_prompt();
+void remove_node(ClusterNode *node);
 void cluster_destroy();
 void single_node_state();
 void cluster_quorum();
@@ -116,10 +117,15 @@ void add_node_prompt()
 	char *buffer;
 	
 	buffer = malloc(sizeof(char)*64);
+	printf("-------------------------------------\n");
 	if(clusterEstablished){
+		printf("Adding node to cluster\n");
+		printf("-------------------------------------\n");
 		printf("\nPlease enter the hostname of node you would like to add to the cluster.\n");
 	}
 	else{
+		printf("Establishing cluster\n");
+		printf("-------------------------------------\n");
 		printf("\nPlease enter the hostname of node you would like to start the cluster with.\n");
 	}
 	scanf("%s", buffer);
@@ -159,6 +165,14 @@ void add_node(char *hostname)
 	}
 	
 	free(command);
+}
+
+/*
+Prompt for removing node
+*/
+void remove_node_prompt()
+{
+	
 }
 
 /*
@@ -217,6 +231,9 @@ void cluster_quorum()
 {
 	char *command;
 	
+	printf("-------------------------------------\n");
+	printf("Quorum Information\n");
+	printf("-------------------------------------\n");
 	command = malloc(sizeof(char)*256);
 	strcpy(command, SSH);
 	strcat(command, cluster_head->hostname);
@@ -234,6 +251,9 @@ void cluster_membership()
 {
 	char *command;
 	
+	printf("-------------------------------------\n");
+	printf("Cluster Membership\n");
+	printf("-------------------------------------\n");
 	command = malloc(sizeof(char)*256);
 	strcpy(command, SSH);
 	strcat(command, cluster_head->hostname);
@@ -251,6 +271,9 @@ void cluster_health()
 {
 	char *command;
 	
+	printf("-------------------------------------\n");
+	printf("Cluster Health\n");
+	printf("-------------------------------------\n");
 	command = malloc(sizeof(char)*256);
 	strcpy(command, SSH);
 	strcat(command, cluster_head->hostname);
