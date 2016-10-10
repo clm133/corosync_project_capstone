@@ -168,11 +168,14 @@ void add_node(char *hostname)
 }
 
 /*
-Prompt for removing node
+Prompt for removing node by hostname
 */
 void remove_node_prompt()
 {
-	
+	printf("-------------------------------------\n");
+	printf("Removing node\n");
+	printf("-------------------------------------\n");
+	printf("The following nodes are in the cluster:\n");
 }
 
 /*
