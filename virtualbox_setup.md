@@ -3,7 +3,7 @@
 1. [Installing Virtual Box](#installing-virtual-box)
 2. [Installing Ubuntu Server 14.04.5 LTS on a VM](#installing-ubuntu-server-14045-lts-on-a-vm)
 3. [Setting Up Our Internal Network To Use Static IP Addresses](#setting-up-our-internal-network-to-use-static-ip-addresses)
-4. [Getting Corosync and Pacemaker installed](#getting-corosync-and-pacemaker-installed)
+4. [Getting Corosync installed](#getting-corosync-installed)
 
 ## Installing Virtual Box
 * We are using Oracle VirtualBox 5.1.6 to run four virtual servers. 
@@ -99,7 +99,7 @@
 15. Finally, make sure you still have access to the internet through eth0. just ping www.google.com and see if you get anything.
 16. Congratulations! our network is setup!
 
-## Getting Corosync and Pacemaker installed
+## Getting Corosync installed
 * Use the command ```apt-get install corosync``` to install corosync on each node.
 * Use vi /etc/corosync/corosync.conf to access the the file. Comment out where it currently says bindnetaddr, then on the next line add: 'bindnetaddr: 10.0.0.0'. You'll notice this is the network we setup earlier.
 * You can check that things are proceeding along correctly by entering the command corosync -f which will prompt the VM to begin running corosync. It tells you how many members there are and some other status information. As you enter this command on every VM you should see updates on all machines currently running corosync indicating a new member has been added. cool!
