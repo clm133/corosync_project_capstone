@@ -1,3 +1,8 @@
+/*
+ This is the file Brian provided us as a reference.
+*/
+
+
 #include <iostream>
 #include <corosync/quorum.h>
 #include <corosync/votequorum.h>
