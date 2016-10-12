@@ -3,7 +3,7 @@
 1. [Installing Virtual Box](#installing-virtual-box)
 2. [Installing Ubuntu Server 14.04.5 LTS on a VM](#installing-ubuntu-server-14045-lts-on-a-vm)
 3. [Setting Up Our Internal Network To Use Static IP Addresses](#setting-up-our-internal-network-to-use-static-ip-addresses)
-4. [Getting Corosync and Pacemaker installed](#getting-corosync-and-pacemaker-installed)
+4. [Getting Corosync installed](#getting-corosync-installed)
 
 ## Installing Virtual Box
 * We are using Oracle VirtualBox 5.1.6 to run four virtual servers. 
@@ -99,78 +99,7 @@
 15. Finally, make sure you still have access to the internet through eth0. just ping www.google.com and see if you get anything.
 16. Congratulations! our network is setup!
 
-## Getting Corosync and Pacemaker installed
-* This section is still under construction. These were the resources I used:
- * http://clusterlabs.org/quickstart-ubuntu.html
- * http://angryelectron.com/corosync-on-ubuntu1204/
- * http://blog.netinstall.net/2014/09/pacemaker-and-corosync-ha-2-node-setup.html
- * https://syshell.net/2014/08/26/pacemaker-configure-cluster/
- * http://clusterlabs.org/wiki/Initial_Configuration
-* I will flesh this section out soon, hopefully unifying these into a single process, but if you wanted to get a head start read the links above. 
-
-### Tentative corosync/pacemaker installation guide
- * First you will want to install pacemaker and corosync. To do this, use the command apt-get install corosync pacemaker fence-agents
- * Next you'll need to configure a cluster.conf file located in /etc/cluster/cluster.conf
- * This gives kind of a basic overview of what the cluster.conf file : http://www.sourceware.org/cluster/doc/cluster_schema.html
- * For the purposes of just getting corosync running, we need just a barebones cluster.conf file. Here is what I used:
-  ```xml
-	<?xml version="1.0"?>
-	<cluster config_version="1" name="pacemaker1">
-	  <logging debug="off"/>
-	  <clusternodes>
-	    <clusternode name="node1" nodeid="1">
-	      <fence>
-	        <method name="pcmk-redirect">
-	          <device name="pcmk" port="node1"/>
-	        </method>
-	      </fence>
-	    </clusternode>
-	    <clusternode name="node2" nodeid="2">
-	      <fence>
-	        <method name="pcmk-redirect">
-	          <device name="pcmk" port="node2"/>
-	        </method>
-	      </fence>
-	    </clusternode>
-		<clusternode name="node3" nodeid="3">
-	      <fence>
-	        <method name="pcmk-redirect">
-	          <device name="pcmk" port="node3"/>
-	        </method>
-	      </fence>
-	    </clusternode>
-		<clusternode name="node4" nodeid="4">
-	      <fence>
-	        <method name="pcmk-redirect">
-	          <device name="pcmk" port="node4"/>
-	        </method>
-	      </fence>
-	    </clusternode>
-	  </clusternodes>
-	  <fencedevices>
-	    <fencedevice name="pcmk" agent="fence_pcmk"/>
-	  </fencedevices>
-	</cluster>
-	
-  ```
-* Notice the attributes name and port have values of "nodeN". These are the host names that we configured earlier. If you did not use node1, node2, node3, node4 as your host name, you should replace those valuse with the host names you did use.
-* The cluster.conf file has to be written on every node of the cluster. This obviously would be tedious to do with vi, so you can use ssh and putty to copy/paste this file in each node. You could also write the file in one node and ssh it to all the others. If you want to use ssh, you can install it on a VM with the command: apt-get install openssh-client openssh-server
-* You can then use putty to remotely login to your VM and copy/paste the cluster.conf code above. To do this, first enter the command ifconfig to see the ip address used by eth0. Then in putty, under hostname, provide that ip address and you should be able to remotely login to your virtual machine --cool! Then copy/paste the code above into /etc/cluster.conf
-* After all machines have the cluster.conf file, you need to configure corosync's network binding.
-* To do this, you'll want to edit the corosync config file (I imagine this will be a file we will be modifying a lot for this project so get familiar with it).
-* Use vi /etc/corosync/corosync.conf to access the the file. Comment out where it currently says bindnetaddr, then on the next line add: 'bindnetaddr: 10.0.0.0'
-* also, at the top of the corosync.conf file, add the following:
-	```code
-	service {
-		ver:       0
-  		name:      pacemaker
-	}
-	```
-* This tells corosync to run pacemaker automatically, so you don't have to manually turn it on (this apparently doesn't exactly work, as we still have to turn pacemaker on). Add these changes to every node.
+## Getting Corosync installed
+* Use the command ```apt-get install corosync``` to install corosync on each node.
+* Use vi /etc/corosync/corosync.conf to access the the file. Comment out where it currently says bindnetaddr, then on the next line add: 'bindnetaddr: 10.0.0.0'. You'll notice this is the network we setup earlier.
 * You can check that things are proceeding along correctly by entering the command corosync -f which will prompt the VM to begin running corosync. It tells you how many members there are and some other status information. As you enter this command on every VM you should see updates on all machines currently running corosync indicating a new member has been added. cool!
-* You can exit corosync on any given VM by hitting 'ctr + c', and the machines still running it will tell you they've lost a member!
-* That said, Corosync is only part of our cluster infrastructure, we also need to set up pacemaker to get the cluster up and totally running. 
-* For the purposes of resolving a strange bug with ubuntu, edit the file /etc/default/corosync and change where it says "START=no" to "START=yes". 
-* Next, enter: "/etc/init.d/corosync start". You should receive some confirmation that it started.
-* Then, enter: "/etc/init.d/pacemaker start". You should receive some confirmation that it started.
-* Now you can check the status of the cluster with "crm_mon -1". 
