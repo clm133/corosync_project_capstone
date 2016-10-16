@@ -1,27 +1,29 @@
-IDIRQ=inc/inc_libqb
-IDIRC=inc/inc_coro
-LDIRQ=lib/lib_libqb
-LDIRC=lib/lib_coro
-LIBS=-L$(LDIRQ) -L$(LDIRC)
-ODIR=obj
-CC=gcc
-CFLAGS=-I$(IDIRC) -I$(IDIRQ)
-SOURCES=$(wildcard src/*.c)
-OBJECTS=$(patsubst %.c, %.o, $(SOURCES))
-EXECUTABLE=bin/client
+## Compiler
+CC = gcc
+## Includes
+## Directories
+ODIR = obj
+SDIR = src
+BDIR = bin
+## Executables
+OUT = $(BDIR)/client
 
-all:    build $(EXECUTABLE)
+_OBJS = client.o
+OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
-$(EXECUTABLE):  $(OBJECTS)
-	$(CC) $(CFLAGS) -o $@ $(OBJECTS)
+$(ODIR)/%.o: $(SDIR)/%.c build
+	$(CC) -c -o $@ $< 
 
-$(OBJECTS): src/%.o : src/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
+$(OUT): $(OBJS)
+	$(CC) -o $(OUT) $^
+	
 build:
 	@mkdir -p bin
+	@mkdir -p obj
+
+.PHONY: clean
 
 clean:
-	rm -rf $(EXECUTABLE) $(OBJECTS) bin
+	rm -rf bin obj
 	find . -name "*~" -exec rm {} \;
 	find . -name "*.o" -exec rm {} \;
