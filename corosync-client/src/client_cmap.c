@@ -30,7 +30,7 @@ int print_membership()
 	//initialize connection and iterator
 	err = cmap_init(conn);
 	if(err != 0){
-		printf("Could not establish connection\n");
+		printf("Could not establish connection. Error #: %s\n", get_error(err));
 		return err;
 	}
 	err = cmap_iter_init(conn, "nodelist.node", &iter_h);
