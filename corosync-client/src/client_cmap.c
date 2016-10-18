@@ -29,12 +29,12 @@ int print_membership()
 	
 	//initialize connection and iterator
 	err = cmap_init(conn);
-	if(err != 0){
+	if(err != CS_OK){
 		printf("Could not establish connection. Error #: %s\n", get_error(err));
 		return err;
 	}
 	err = cmap_iter_init(conn, "nodelist.node", &iter_h);
-	if(err != 0){
+	if(err != CS_OK){
 		printf("Could not establish cmap iterator\n");
 		return err;
 	}
@@ -43,7 +43,7 @@ int print_membership()
         size_t val_len = 0;
         cmap_value_types_t val_type;
         err = cmap_iter_next(conn, iter_h, key_name, &val_len, &val_type);
-		if (err != 0) {
+		if (err != CS_OK) {
 			printf("Uh-oh: %s\n", get_error(err));
             break;
         }
