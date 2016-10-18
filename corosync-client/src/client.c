@@ -14,9 +14,9 @@ int func;
 int func_1(char *item)
 {
 	int err;
-	//printing membership status
-	if(strcasecmp(item, "membership") == 0){
-		err = print_membership();
+	//printing ring status
+	if(strcasecmp(item, "ring") == 0){
+		err = print_ring();
 	}
 	else{
 		err = -1;

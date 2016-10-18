@@ -30,7 +30,7 @@ int add_node(char *addr)
 	return 0;
 }
 
-int print_membership()
+int print_ring()
 {
 	cs_error_t err;
 	corosync_cfg_handle_t handle;
