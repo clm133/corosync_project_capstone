@@ -1,7 +1,7 @@
 #include "client_errors.h"
 
 /* Using Brian's example code error translator here*/
-const char * get_error(int err)
+const char * get_error(cs_error_t err)
 {
     switch(err){
     case CS_OK: return "Success";

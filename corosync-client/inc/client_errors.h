@@ -12,6 +12,6 @@
 #include <corosync/quorum.h>
 #include <corosync/votequorum.h>
 
-const char * get_error(int err);
+const char *get_error(cs_error_t err);
 
 #endif /* CLIENT_ERRORS_H */

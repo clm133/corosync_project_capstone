@@ -17,6 +17,12 @@ int func_1(char *item)
 	//printing ring status
 	if(strcasecmp(item, "ring") == 0){
 		err = print_ring();
+		printf("\n");
+	}
+	//printing members
+	if(strcasecmp(item, "members") == 0){
+		err = print_members();
+		printf("\n");
 	}
 	else{
 		err = -1;
@@ -73,12 +79,13 @@ int main(int argc, char **argv)
 {	
 	struct argp_option options[]={
 		{ "add", 'a', "address", 0, "add a node to the cluster"},
-		{ "status", 's', "membership/quorum/ring/node", 0, "prints status of arguments"},
+		{ "status", 's', "members/quorum/ring/node", 0, "prints status of supplied arguments"},
 		{0}
 	};
 	
 	struct argp argp = {options, parse_opt, 0, 0, 0, 0, 0};
 	struct arguments arguments;
+	printf("\n");
 	if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && func == 1){
 		const char *prev = NULL;
 		char *item;
