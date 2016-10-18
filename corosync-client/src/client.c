@@ -2,12 +2,27 @@
 #include <argp.h>
 #include <argz.h>
 #include <stdlib.h>
-#include "client_cmap.h"
+#include <string.h>
+#include "cluster_manager.h"
+#include "client_errors.h"
 
 const char *argp_program_bug_address = "charliemietzner@gmail.com";
 const char *argp_program_version = "version 1.0";
 
-int option;
+int func;
+
+int func_1(char *item)
+{
+	int err;
+	//printing membership status
+	if(strcasecmp(item, "membership") == 0){
+		err = print_membership();
+	}
+	else{
+		err = -1;
+		return err;
+	}
+}
 
 struct arguments
 {
@@ -23,7 +38,12 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 	a = state->input;
 	switch(key){
 		case 'a':
-			option = 1;
+			func = 2;
+			argz_add(&a->argz, &a->argz_len, arg);
+			break;
+		
+		case 's':
+			func = 1;
 			argz_add(&a->argz, &a->argz_len, arg);
 			break;
 			
@@ -53,20 +73,20 @@ int main(int argc, char **argv)
 {	
 	struct argp_option options[]={
 		{ "add", 'a', "address", 0, "add a node to the cluster"},
+		{ "status", 's', "membership/quorum/ring/node", 0, "prints status of arguments"},
 		{0}
 	};
 	
 	struct argp argp = {options, parse_opt, 0, 0, 0, 0, 0};
 	struct arguments arguments;
-	if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && option == 1){
+	if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && func == 1){
 		const char *prev = NULL;
-		char *addr;
-		while((addr = argz_next(arguments.argz, arguments.argz_len, prev))){
-			add_node(addr);
-			prev = addr;
+		char *item;
+		while((item = argz_next(arguments.argz, arguments.argz_len, prev))){
+			func_1(item);
+			prev = item;
 		}
 		free(arguments.argz);
-		print_membership();
 	}
 	return 0;
 } 

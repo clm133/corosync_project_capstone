@@ -3,7 +3,7 @@ CC = gcc
 ## Includes
 INC = -Iinc -Iinc/corosync -Iinc/libqb -Iinc/libqb/qb
 ## Libraries
-STATLIBS = lib/libcmap.a lib/libcorosync_common.a lib/libqb.a
+STATLIBS = lib/libcmap.a lib/libcorosync_common.a lib/libqb.a lib/libcfg.a
 GLIBS = -lpthread -ldl
 ## Directories
 IDIR = inc
@@ -14,7 +14,7 @@ ODIR = obj
 ## Executables
 OUT = $(BDIR)/client
 
-_OBJS = client.o client_cmap.o
+_OBJS = client.o client_errors.o cluster_manager.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 $(ODIR)/%.o: $(SDIR)/%.c build
