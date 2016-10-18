@@ -40,9 +40,9 @@ int print_ring()
 	unsigned int i;
 	unsigned int j;
 	unsigned int node_id;
-	
-	printf("RING STATUS:");
-	err = cfg_init(handle);
+
+	printf("RING STATUS:\n");
+	err = corosync_cfg_initialize(&handle, NULL);
 	//unsuccessful init
 	if(err != CS_OK){
 		printf("Failed to initialize corosync configuration API. Error#%d: %s\n", err, get_error(err));
