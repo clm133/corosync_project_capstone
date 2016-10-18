@@ -66,6 +66,7 @@ int main(int argc, char **argv)
 			prev = addr;
 		}
 		free(arguments.argz);
+		print_membership();
 	}
 	return 0;
 } 
