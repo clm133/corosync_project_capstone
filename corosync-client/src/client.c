@@ -2,6 +2,7 @@
 #include <argp.h>
 #include <argz.h>
 #include <stdlib.h>
+#include "client_cmap.h"
 
 const char *argp_program_bug_address = "charliemietzner@gmail.com";
 const char *argp_program_version = "version 1.0";
@@ -61,7 +62,7 @@ int main(int argc, char **argv)
 		const char *prev = NULL;
 		char *addr;
 		while((addr = argz_next(arguments.argz, arguments.argz_len, prev))){
-			printf("%s\n", addr);
+			add_node(addr);
 			prev = addr;
 		}
 		free(arguments.argz);
