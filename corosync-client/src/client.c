@@ -30,6 +30,27 @@ int func_1(char *item)
 	}
 }
 
+int func_2(char *item)
+{
+	int err;
+	uint32_t node_id;
+	
+	//get_highest_ID
+	if(strcasecmp(item, "highest-node-id") == 0){
+		err = get_highest_id(&node_id);
+		if(err != CS_OK){
+			return err;
+		}
+		printf("The highest node id found was: %u\n", node_id);
+		printf("\n");
+	}
+	else{
+		err = -1;
+		return err;
+	}
+	return err;
+}
+
 struct arguments
 {
 	char *argz;
@@ -91,6 +112,15 @@ int main(int argc, char **argv)
 		char *item;
 		while((item = argz_next(arguments.argz, arguments.argz_len, prev))){
 			func_1(item);
+			prev = item;
+		}
+		free(arguments.argz);
+	}
+	else if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && func == 2){
+		const char *prev = NULL;
+		char *item;
+		while((item = argz_next(arguments.argz, arguments.argz_len, prev))){
+			func_2(item);
 			prev = item;
 		}
 		free(arguments.argz);

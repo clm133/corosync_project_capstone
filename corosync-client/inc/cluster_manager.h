@@ -16,6 +16,8 @@
 #include <corosync/votequorum.h>
 
 int add_node(char *addr);
+int set_key(cmap_handle_t handle, const char *key_name, const char *key_type_s, const char *key_value_s);
+int get_highest_id(uint32_t *node_id);
 int print_key(cmap_handle_t handle, const char *key_name, size_t value_len, const void *value, cmap_value_types_t type);
 int print_ring();
 int print_members();

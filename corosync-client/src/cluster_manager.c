@@ -1,12 +1,78 @@
 #include "cluster_manager.h"
 #include "client_errors.h"
 
+#define NODELIST_PREFIX "nodelist.*"
 #define MEMBERS_PREFIX "runtime.totem.pg.mrp.srp.members."
+#define HIGHEST_ID_PREFIX "runtime.votequorum.highest_node_id."
 #define MAX_TRY_AGAIN 10
 
 int add_node(char *addr)
 {
-	return 0;
+	cs_error_t err;
+	cmap_handle_t cmap_handle;
+	cmap_iter_handle_t iter_handle;
+	char key_name[CMAP_KEYNAME_MAXLEN + 1];
+	size_t value_len;
+	cmap_value_types_t type;
+	
+	printf("ADDING NODE...\n");
+	//try to initialize cmap
+	err = cmap_initialize(&cmap_handle);
+	if(err != CS_OK){
+		printf("Failed to cmap. Error#%d: %s\n", err, get_error(err));
+		return err;
+	}
+	//try to initialize iterator
+	err = cmap_iter_init(cmap_handle, MEMBERS_PREFIX, &iter_handle);
+	if (err != CS_OK) {
+		printf("Failed to initialize iteration. Error: %s\n", get_error(err));
+		return err;
+	}
+	//check how many nodes are in node list (if any)
+	
+	return err;
+}
+
+int get_highest_id(uint32_t *node_id)
+{
+	cs_error_t err;
+	cmap_handle_t cmap_handle;
+	cmap_iter_handle_t iter_handle;
+	char key_name[CMAP_KEYNAME_MAXLEN + 1];
+	size_t value_len;
+	cmap_value_types_t type;
+	
+	//try to initialize cmap
+	err = cmap_initialize(&cmap_handle);
+	if(err != CS_OK){
+		printf("Failed to initialize cmap. Error#%d: %s\n", err, get_error(err));
+		return err;
+	}
+	//try to initialize iterator
+	err = cmap_iter_init(cmap_handle, HIGHEST_ID_PREFIX, &iter_handle);
+	if (err != CS_OK) {
+		printf("Failed to initialize iteration. Error: %s\n", get_error(err));
+		return err;
+	}
+	//grab highest id from the iter_handle, if possible...
+	err = cmap_iter_next(cmap_handle, iter_handle, key_name, &value_len, &type);
+	if (err != CS_OK) {
+		printf("Failed to find highest node ID. Error: %s\n", get_error(err));
+		return err;
+	}
+	err = cmap_get_uint32(cmap_handle, key_name, node_id);
+	if (err != CS_OK) {
+		printf("Failed to get the highest node ID. Error: %s\n", get_error(err));
+		return err;
+	}
+	cmap_iter_finalize(cmap_handle, iter_handle);
+	(void)cmap_finalize(cmap_handle);
+	return CS_OK;
+}
+
+int set_key(cmap_handle_t handle, const char *key_name, const char *key_type_s, const char *key_value_s)
+{
+	
 }
 
 /* I pretty much just lifted the print_key function from the corosync-cmapctl here */
@@ -226,7 +292,6 @@ int print_ring()
 	char **status; //array of node status
 	unsigned int count; //count of member nodes
 	unsigned int i;
-	unsigned int j;
 	unsigned int node_id;
 
 	printf("PRINTING RING STATUS:\n");
@@ -283,7 +348,7 @@ int print_members()
 	cmap_iter_handle_t iter_handle;
 	char key_name[CMAP_KEYNAME_MAXLEN + 1];
 	char *cur_key;
-	char prev_key_name[CMAP_KEYNAME_MAXLEN + 1];
+	char prev_key_name[CMAP_KEYNAME_MAXLEN +1 ];
 	char *old_key;
 	size_t value_len;
 	cmap_value_types_t type;
@@ -294,7 +359,7 @@ int print_members()
 	//try to initialize cmap
 	err = cmap_initialize(&cmap_handle);
 	if(err != CS_OK){
-		printf("Failed to initialize iteration. Error#%d: %s\n", err, get_error(err));
+		printf("Failed to initialize cmap. Error#%d: %s\n", err, get_error(err));
 		return err;
 	}
 	//try to initialize iterator
@@ -304,15 +369,16 @@ int print_members()
 		return err;
 	}
 	count = -1;
+	old_key = &prev_key_name[strlen(MEMBERS_PREFIX)];
 	//basically a while(hasNext())
 	while((err = cmap_iter_next(cmap_handle, iter_handle, key_name, &value_len, &type)) == CS_OK){
-		cur_key = &key_name[0 + strlen(MEMBERS_PREFIX)];
+		cur_key = &key_name[strlen(MEMBERS_PREFIX)];
 		if(count < 0 || (unsigned int)atoi(cur_key) != (unsigned int)atoi(old_key)){
 			count++;
 			printf("////////////////////////////////////////////////////////////////////////\n");
 			printf("%s%d\t%s%u\n", "Node_", count, "ID: ", (unsigned int)atoi(cur_key)); 
 			printf("////////////////////////////////////////////////////////////////////////\n");
-			old_key = cur_key;
+			strcpy(old_key, cur_key);
 		}
 		print_key(cmap_handle, key_name, value_len, NULL, type);
 	}
