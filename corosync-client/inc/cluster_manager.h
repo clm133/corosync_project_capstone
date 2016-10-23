@@ -3,8 +3,8 @@
 *  checking/printing cluster health
 */
 
-#ifndef CLUSTER_MANAGER_H
-#define CLUSTER_MANAGER_H
+#ifndef CLUSTER_MANAGER_H_DEFINED
+#define CLUSTER_MANAGER_H_DEFINED
 
 #include <stdio.h>
 #include <stdlib.h>

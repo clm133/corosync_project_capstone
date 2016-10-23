@@ -32,8 +32,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MODIFIED_CMAPCTL_H
-#define MODIFIED_CMAPCTL_HH
+#ifndef MODIFIED_CMAPCTL_H_DEFINED
+#define MODIFIED_CMAPCTL_H_DEFINED
 
 #include <ctype.h>
 #include <stdio.h>
