@@ -5,12 +5,14 @@
 #include <string.h>
 #include "cluster_manager.h"
 #include "client_errors.h"
+#include "modified_cmapctl.h"
 
 const char *argp_program_bug_address = "charliemietzner@gmail.com";
 const char *argp_program_version = "version 1.0";
 
 int func;
 
+/* -s option prints out information regarding the following arguments: "ring", "members", "node"*/
 int func_1(char *item)
 {
 	int err;
@@ -33,21 +35,10 @@ int func_1(char *item)
 int func_2(char *item)
 {
 	int err;
-	uint32_t node_id;
 	
-	//get_highest_ID
-	if(strcasecmp(item, "highest-node-id") == 0){
-		err = get_highest_id(&node_id);
-		if(err != CS_OK){
-			return err;
-		}
-		printf("The highest node id found was: %u\n", node_id);
-		printf("\n");
-	}
-	else{
-		err = -1;
-		return err;
-	}
+	err = 0;
+	
+	
 	return err;
 }
 
