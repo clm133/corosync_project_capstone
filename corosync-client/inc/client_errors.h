@@ -3,8 +3,8 @@
 * to include our own clients errors as well.
 */
 
-#ifndef CLIENT_ERRORS_H
-#define CLIENT_ERRORS_HH
+#ifndef CLIENT_ERRORS_H_DEFINED
+#define CLIENT_ERRORS_H_DEFINED
 
 #include <stdio.h>
 #include <stdlib.h>

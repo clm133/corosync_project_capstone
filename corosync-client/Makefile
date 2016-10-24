@@ -12,9 +12,9 @@ BDIR = bin
 ODIR = obj
 ## Executables
 ## Executables
-OUT = $(BDIR)/coro-client
+OUT = $(BDIR)/corosync-client
 
-_OBJS = client.o cluster_manager.o client_errors.o
+_OBJS = client.o cluster_manager.o conf_writer.o modified_cmapctl.o client_errors.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 $(ODIR)/%.o: $(SDIR)/%.c build

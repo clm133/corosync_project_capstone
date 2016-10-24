@@ -5,13 +5,18 @@
 #include <string.h>
 #include "cluster_manager.h"
 #include "client_errors.h"
+#include "modified_cmapctl.h"
 
 const char *argp_program_bug_address = "charliemietzner@gmail.com";
 const char *argp_program_version = "version 1.0";
 
-int func;
+enum client_task {
+	status,
+	add_option
+}task;
 
-int func_1(char *item)
+/* -s option prints out information regarding the following arguments: "ring", "members", "node"*/
+int status_print(char *item)
 {
 	int err;
 	//printing ring status
@@ -30,23 +35,20 @@ int func_1(char *item)
 	}
 }
 
-int func_2(char *item)
+int add_options(char *item, char *value)
 {
 	int err;
-	uint32_t node_id;
 	
-	//get_highest_ID
-	if(strcasecmp(item, "highest-node-id") == 0){
-		err = get_highest_id(&node_id);
+	if(strcmp(item, "node") == 0){
+		err = add_node(value);
 		if(err != CS_OK){
-			return err;
+			printf("something went wrong adding node! Error#%d: %s\n", err, get_error(err));
+			return -1;
 		}
-		printf("The highest node id found was: %u\n", node_id);
-		printf("\n");
+		printf("Node added successfully.\n");
 	}
 	else{
 		err = -1;
-		return err;
 	}
 	return err;
 }
@@ -65,12 +67,12 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 	a = state->input;
 	switch(key){
 		case 'a':
-			func = 2;
+			task = add_option;
 			argz_add(&a->argz, &a->argz_len, arg);
 			break;
 		
 		case 's':
-			func = 1;
+			task = status;
 			argz_add(&a->argz, &a->argz_len, arg);
 			break;
 			
@@ -99,7 +101,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 int main(int argc, char **argv)
 {	
 	struct argp_option options[]={
-		{ "add", 'a', "address", 0, "add a node to the cluster"},
+		{ "add", 'a', "node", 0, "add a node with address arguement to the cluster"},
 		{ "status", 's', "members/quorum/ring/node", 0, "prints status of supplied arguments"},
 		{0}
 	};
@@ -107,21 +109,24 @@ int main(int argc, char **argv)
 	struct argp argp = {options, parse_opt, 0, 0, 0, 0, 0};
 	struct arguments arguments;
 	printf("\n");
-	if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && func == 1){
+	if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && task == status){
 		const char *prev = NULL;
 		char *item;
 		while((item = argz_next(arguments.argz, arguments.argz_len, prev))){
-			func_1(item);
+			status_print(item);
 			prev = item;
 		}
 		free(arguments.argz);
 	}
-	else if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && func == 2){
+	
+	else if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && task == add_option){
 		const char *prev = NULL;
 		char *item;
+		char *value;
 		while((item = argz_next(arguments.argz, arguments.argz_len, prev))){
-			func_2(item);
-			prev = item;
+			value = argz_next(arguments.argz, arguments.argz_len, item);
+			add_options(item, value);
+			prev = value;
 		}
 		free(arguments.argz);
 	}
