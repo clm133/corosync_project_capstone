@@ -66,8 +66,6 @@ struct name_to_type_item name_to_type[] = {
 	{"str", CMAP_VALUETYPE_STRING},
 	{"bin", CMAP_VALUETYPE_BINARY}};
 
-int show_binary = 0;
-
 int convert_name_to_type(const char *name)
 {
 	int i;
@@ -184,22 +182,6 @@ void print_key(cmap_handle_t handle,const char *key_name,size_t value_len,const 
 				str = (char *)value;
 			}
 			break;
-		case CMAP_VALUETYPE_BINARY:
-			if (show_binary) {
-				if (value == NULL) {
-					bin_value = malloc(value_len);
-					if (bin_value == NULL) {
-						fprintf(stderr, "Can't alloc memory\n");
-						exit(EXIT_FAILURE);
-					}
-					bin_value_len = value_len;
-					err = cmap_get(handle, key_name, bin_value, &bin_value_len, NULL);
-				} else {
-					bin_value = (char *)value;
-				}
-			}
-			break;
-		}
 
 		if (err == CS_OK) {
 			end_loop = 1;
@@ -261,6 +243,7 @@ void print_key(cmap_handle_t handle,const char *key_name,size_t value_len,const 
 		}
 		break;
 	}
+	}
 
 	printf("\n");
 }
@@ -307,35 +290,6 @@ void delete_with_prefix(cmap_handle_t handle, const char *prefix)
 		}
 	}
 	cmap_iter_finalize(handle, iter_handle);
-}
-
-void cmap_notify_fn(
-	cmap_handle_t cmap_handle,
-	cmap_track_handle_t cmap_track_handle,
-	int32_t event,
-	const char *key_name,
-	struct cmap_notify_value new_val,
-	struct cmap_notify_value old_val,
-	void *user_data)
-{
-	switch (event) {
-	case CMAP_TRACK_ADD:
-		printf("create> ");
-		print_key(cmap_handle, key_name, new_val.len, new_val.data, new_val.type);
-		break;
-	case CMAP_TRACK_DELETE:
-		printf("delete> ");
-		print_key(cmap_handle, key_name, old_val.len, old_val.data, old_val.type);
-		break;
-	case CMAP_TRACK_MODIFY:
-		printf("modify> ");
-		print_key(cmap_handle, key_name, new_val.len, new_val.data, new_val.type);
-		break;
-	default:
-		printf("unknown change> ");
-		break;
-	}
-
 }
 
 void set_key(cmap_handle_t handle, const char *key_name, const char *key_type_s, const char *key_value_s)
@@ -457,73 +411,4 @@ void set_key(cmap_handle_t handle, const char *key_name, const char *key_type_s,
 		fprintf (stderr, "Failed to set key %s. Error %s\n", key_name, cs_strerror(err));
 		exit (EXIT_FAILURE);
 	}
-}
-
-void read_in_config_file(cmap_handle_t handle, char * filename)
-{
-	int ignore;
-	int c;
-	FILE* fh;
-	char buf[1024];
-	char * line;
-	char *key_name;
-	char *key_type_s;
-	char *key_value_s;
-
-	fh = fopen(filename, "r");
-	if (fh == NULL) {
-		perror ("Couldn't open file.");
-		return;
-	}
-
-	while (fgets (buf, 1024, fh) != NULL) {
-		/* find the first real character, if it is
-		 * a '#' then ignore this line.
-		 * else process.
-		 * if no real characters then also ignore.
-		 */
-		ignore = 1;
-		for (c = 0; c < 1024; c++) {
-			if (isblank (buf[c])) {
-				continue;
-			}
-
-			if (buf[c] == '#' || buf[c] == '\n') {
-				ignore = 1;
-				break;
-			}
-			ignore = 0;
-			line = &buf[c];
-			break;
-		}
-		if (ignore == 1) {
-			continue;
-		}
-
-		/*
-		 * should be:
-		 * [^[^]]<key>[ <type> <value>]
-		 */
-		key_name = strtok(line, " \n");
-		if (key_name && *key_name == '^') {
-			key_name++;
-			if (*key_name == '^') {
-				key_name++;
-				delete_with_prefix(handle, key_name);
-			} else {
-				cs_error_t err;
-
-				err = cmap_delete(handle, key_name);
-				if (err != CS_OK) {
-					fprintf(stderr, "Can't delete key %s. Error %s\n", key_name, cs_strerror(err));
-				}
-			}
-		} else {
-			key_type_s = strtok(NULL, " \n");
-			key_value_s = strtok(NULL, " \n");
-			set_key(handle, key_name, key_type_s, key_value_s);
-		}
-	}
-
-	fclose (fh);
 }

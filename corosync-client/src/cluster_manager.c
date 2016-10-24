@@ -1,10 +1,91 @@
 #include "cluster_manager.h"
 #include "client_errors.h"
 #include "modified_cmapctl.h"
+#include "conf_writer.h"
+
+cs_error_t get_highest_node(uint32_t *highest_id)
+{
+	cs_error_t err;
+	cmap_handle_t cmap_handle;
+	cmap_iter_handle_t iter_handle; 
+	char key_name[CMAP_KEYNAME_MAXLEN + 1];
+	size_t value_len;
+	cmap_value_types_t type;
+	const char *generic_key = "nodelist.node.X.";
+	uint32_t id;
+	
+	//initialize cmap handle
+	err = cmap_initialize(&cmap_handle);
+	if(err != CS_OK){
+		printf("Failed to initialize cmap. Error#%d: %s\n", err, get_error(err));
+		return err;
+	}
+	//initialize iterator handle (we are looking for all nodeid)
+	err = cmap_iter_init(cmap_handle, "nodelist.node.", &iter_handle);
+	if(err != CS_OK){
+		printf("Failed to initialize iterator. Error#%d: %s\n", err, get_error(err));
+		(void)cmap_finalize(cmap_handle);
+		return err;
+	}
+	//iterate through list
+	*highest_id = 0;
+	while((err = cmap_iter_next(cmap_handle, iter_handle, key_name, &value_len, &type)) == CS_OK){
+		//find nodeid key
+		if(strcmp(&key_name[strlen(generic_key)], "nodeid") == 0){
+			//get nodeid
+			err = cmap_get_uint32(cmap_handle, key_name, &id);
+			//compare with current highest id
+			if(id > *highest_id){
+				*highest_id = id;
+			}
+		}
+	}
+	//close the handles
+	(void)cmap_iter_finalize(cmap_handle, iter_handle);
+	(void)cmap_finalize(cmap_handle);
+	
+	return CS_OK;
+}
 
 int add_node(char *addr)
 {
+	cs_error_t err;
+	cmap_handle_t cmap_handle;
+	uint32_t id;
+	char set_id_key[124];
+	char set_ring0_key[124];
+	char id_char[32];
+	char *nodelist = "nodelist.node.";
+	char *set_id = ".nodeid";
+	char *set_addr = ".ring0_addr";
 	
+	err = get_highest_node(&id);
+	if(err != CS_OK){
+		return -1;
+	}
+	//new node id will be one higher than previous
+	id++;
+	sprintf(id_char, "%u", (unsigned int)id);
+	//key = nodelist.X.node.nodeid
+	strcpy(set_id_key, nodelist);
+	strcat(set_id_key, id_char);
+	strcat(set_id_key, set_id);
+	//key = nodelist.X.node.ring0_addr
+	strcpy(set_ring0_key, nodelist);
+	strcat(set_ring0_key, id_char);
+	strcat(set_ring0_key, set_addr);
+	//initialize cmap handle
+	err = cmap_initialize(&cmap_handle);
+	if(err != CS_OK){
+		printf("Failed to initialize cmap. Error#%d: %s\n", err, get_error(err));
+		return -1;
+	}
+	cmap_set_uint32(cmap_handle, set_id_key, id);
+	cmap_set_string(cmap_handle, set_ring0_key, addr);
+	(void)cmap_finalize(cmap_handle);
+	//write to conf file
+	err = write_config("corosync.conf");
+	return err;
 }
 
 int print_ring()

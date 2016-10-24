@@ -51,6 +51,5 @@ void delete_with_prefix(cmap_handle_t handle, const char *prefix);
 
 void set_key(cmap_handle_t handle, const char *key_name, const char *key_type_s, const char *key_value_s);
 
-void read_in_config_file(cmap_handle_t handle, char * filename);
 
 #endif /* MODIFIED_CMAPCTL_H */

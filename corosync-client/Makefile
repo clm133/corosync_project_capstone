@@ -14,7 +14,7 @@ ODIR = obj
 ## Executables
 OUT = $(BDIR)/corosync-client
 
-_OBJS = client.o cluster_manager.o client_errors.o modified_cmapctl.o conf_writer.o
+_OBJS = client.o cluster_manager.o conf_writer.o modified_cmapctl.o client_errors.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 $(ODIR)/%.o: $(SDIR)/%.c build
