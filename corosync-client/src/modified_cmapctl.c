@@ -182,8 +182,9 @@ void print_key(cmap_handle_t handle,const char *key_name,size_t value_len,const 
 				str = (char *)value;
 			}
 			break;
-
-		if (err == CS_OK) {
+	};
+	
+	if (err == CS_OK) {
 			end_loop = 1;
 		} else if (err == CS_ERR_TRY_AGAIN) {
 			sleep(1);
@@ -195,7 +196,6 @@ void print_key(cmap_handle_t handle,const char *key_name,size_t value_len,const 
 		} else {
 			end_loop = 1;
 		}
-	};
 
 	if (err != CS_OK) {
 		fprintf(stderr, "Can't get value of %s. Error %s\n", key_name, cs_strerror(err));
@@ -206,43 +206,43 @@ void print_key(cmap_handle_t handle,const char *key_name,size_t value_len,const 
 	printf("%s (", key_name);
 
 	switch (type) {
-	case CMAP_VALUETYPE_INT8:
-		printf("%s) = %"PRId8, "i8", i8);
-		break;
-	case CMAP_VALUETYPE_UINT8:
-		printf("%s) = %"PRIu8, "u8", u8);
-		break;
-	case CMAP_VALUETYPE_INT16:
-		printf("%s) = %"PRId16, "i16", i16);
-		break;
-	case CMAP_VALUETYPE_UINT16:
-		printf("%s) = %"PRIu16, "u16", u16);
-		break;
-	case CMAP_VALUETYPE_INT32:
-		printf("%s) = %"PRId32, "i32", i32);
-		break;
-	case CMAP_VALUETYPE_UINT32:
-		printf("%s) = %"PRIu32, "u32", u32);
-		break;
-	case CMAP_VALUETYPE_INT64:
-		printf("%s) = %"PRId64, "i64", i64);
-		break;
-	case CMAP_VALUETYPE_UINT64:
-		printf("%s) = %"PRIu64, "u64", u64);
-		break;
-	case CMAP_VALUETYPE_FLOAT:
-		printf("%s) = %f", "flt", flt);
-		break;
-	case CMAP_VALUETYPE_DOUBLE:
-		printf("%s) = %lf", "dbl", dbl);
-		break;
-	case CMAP_VALUETYPE_STRING:
-		printf("%s) = %s", "str", str);
-		if (value == NULL) {
-			free(str);
+		case CMAP_VALUETYPE_INT8:
+			printf("%s) = %"PRId8, "i8", i8);
+			break;
+		case CMAP_VALUETYPE_UINT8:
+			printf("%s) = %"PRIu8, "u8", u8);
+			break;
+		case CMAP_VALUETYPE_INT16:
+			printf("%s) = %"PRId16, "i16", i16);
+			break;
+		case CMAP_VALUETYPE_UINT16:
+			printf("%s) = %"PRIu16, "u16", u16);
+			break;
+		case CMAP_VALUETYPE_INT32:
+			printf("%s) = %"PRId32, "i32", i32);
+			break;
+		case CMAP_VALUETYPE_UINT32:
+			printf("%s) = %"PRIu32, "u32", u32);
+			break;
+		case CMAP_VALUETYPE_INT64:
+			printf("%s) = %"PRId64, "i64", i64);
+			break;
+		case CMAP_VALUETYPE_UINT64:
+			printf("%s) = %"PRIu64, "u64", u64);
+			break;
+		case CMAP_VALUETYPE_FLOAT:
+			printf("%s) = %f", "flt", flt);
+			break;
+		case CMAP_VALUETYPE_DOUBLE:
+			printf("%s) = %lf", "dbl", dbl);
+			break;
+		case CMAP_VALUETYPE_STRING:
+			printf("%s) = %s", "str", str);
+			if (value == NULL) {
+				free(str);
+			}
+			break;
 		}
-		break;
-	}
 	}
 
 	printf("\n");
