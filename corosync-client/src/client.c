@@ -12,7 +12,8 @@ const char *argp_program_version = "version 1.0";
 
 enum client_task {
 	status,
-	add_option
+	add_option,
+	remove_option
 }task;
 
 /* -s option prints out information regarding the following arguments: "ring", "members", "node"*/

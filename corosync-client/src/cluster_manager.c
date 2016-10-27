@@ -100,7 +100,8 @@ int remove_node(uint32_t id){
 
 	cs_error_t err;
 	cmap_handle_t cmap_handle;
-	char *str;
+	uint32_t i;
+	//char *str;
 	char id_key[124];
 	char id_char[32];
 	char *nodelist = "nodelist.node.";
@@ -121,7 +122,7 @@ int remove_node(uint32_t id){
 	}
 
 	// get key, catch error
-	err = cmap_get_string(cmap_handle, id_key, &str);
+	err = cmap_get_uint32(cmap_handle, id_key, &i);
 	if(err != CS_OK){
 		printf("Failed to retrieve key. Error#%d: %s\n", err, get_error(err));
 		return -1;
@@ -135,7 +136,7 @@ int remove_node(uint32_t id){
 	// finalize
 	(void)cmap_finalize(cmap_handle);
 	// write to conf file
-	err = write_config("corosync.conf");
+	//err = write_config("corosync.conf");
 	return err;
 }
 
