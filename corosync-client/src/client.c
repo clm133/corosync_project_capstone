@@ -54,7 +54,8 @@ int add_options(char *item, char *value)
 	return err;
 }
 
-// item -> "node", value -> node key
+
+// item -> "node", value -> node id
 int remove_options(char *item, char *value)
 {
 	int err;
