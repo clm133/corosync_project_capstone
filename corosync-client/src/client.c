@@ -38,7 +38,7 @@ int status_print(char *item)
 int add_options(char *item, char *value)
 {
 	int err;
-	
+
 	if(strcmp(item, "node") == 0){
 		err = add_node(value);
 		if(err != CS_OK){
@@ -63,28 +63,28 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 {
 	size_t count;
 	struct arguments *a;
-	
+
 	a = state->input;
 	switch(key){
 		case 'a':
 			task = add_option;
 			argz_add(&a->argz, &a->argz_len, arg);
 			break;
-		
+
 		case 's':
 			task = status;
 			argz_add(&a->argz, &a->argz_len, arg);
 			break;
-			
+
 		case ARGP_KEY_ARG:
 			argz_add(&a->argz, &a->argz_len, arg);
 			break;
-			
+
 		case ARGP_KEY_INIT:
 			a->argz = 0;
 			a->argz_len = 0;
 			break;
-		
+
 		case ARGP_KEY_END:
 			count = argz_count(a->argz, a->argz_len);
 			if(count > 2){
@@ -96,16 +96,16 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 			break;
 	}
 	return 0;
-} 
+}
 
 int main(int argc, char **argv)
-{	
+{
 	struct argp_option options[]={
 		{ "add", 'a', "node", 0, "add a node with address arguement to the cluster"},
 		{ "status", 's', "members/quorum/ring/node", 0, "prints status of supplied arguments"},
 		{0}
 	};
-	
+
 	struct argp argp = {options, parse_opt, 0, 0, 0, 0, 0};
 	struct arguments arguments;
 	printf("\n");
@@ -118,7 +118,7 @@ int main(int argc, char **argv)
 		}
 		free(arguments.argz);
 	}
-	
+
 	else if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && task == add_option){
 		const char *prev = NULL;
 		char *item;
@@ -131,4 +131,4 @@ int main(int argc, char **argv)
 		free(arguments.argz);
 	}
 	return 0;
-} 
+}
