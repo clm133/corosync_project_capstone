@@ -47,6 +47,9 @@ cs_error_t get_highest_node(uint32_t *highest_id)
 	return CS_OK;
 }
 
+
+// add node
+
 int add_node(char *addr)
 {
 	cs_error_t err;
@@ -87,6 +90,60 @@ int add_node(char *addr)
 	err = write_config("corosync.conf");
 	return err;
 }
+
+
+
+// remove node
+// we should know the id to remove the node we want
+// name the address "key" for convenience.
+int remove_node(uint32_t id){
+
+	cs_error_t err;
+	cmap_handle_t cmap_handle;
+	char *str;
+	char id_key[124];
+	char id_char[32];
+	char *nodelist = "nodelist.node.";
+	char *set_id = ".nodeid";
+	//char *set_addr = ".ring0_addr";
+	sprintf(id_char, "%u", (unsigned int)id);
+
+	//key = nodelist.X.node.nodeid
+	strcpy(id_key, nodelist);
+	strcat(id_key, id_char);
+	strcat(id_key, set_id);
+
+	// initialize cmap_handle
+	err = cmap_initialize(&cmap_handle);
+	if(err != CS_OK){
+		printf("Failed to initialize cmap. Error#%d: %s\n", err, get_error(err));
+		return -1;
+	}
+
+	// get key, catch error
+	err = cmap_get_string(cmap_handle, id_key, &str);
+	if(err != CS_OK){
+		printf("Failed to retrieve key. Error#%d: %s\n", err, get_error(err));
+		return -1;
+	}
+	// the key exists, delete that node
+	err = cmap_delete(cmap_handle,id_key);
+	if(err != CS_OK){
+		printf("Failed to delete key. Error#%d: %s\n", err, get_error(err));
+		return -1;
+	}
+	// finalize
+	(void)cmap_finalize(cmap_handle);
+	// write to conf file
+	err = write_config("corosync.conf");
+	return err;
+}
+
+
+
+
+
+
 
 int print_ring()
 {
