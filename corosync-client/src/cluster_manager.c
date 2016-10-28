@@ -7,13 +7,13 @@ cs_error_t get_highest_node(uint32_t *highest_id)
 {
 	cs_error_t err;
 	cmap_handle_t cmap_handle;
-	cmap_iter_handle_t iter_handle; 
+	cmap_iter_handle_t iter_handle;
 	char key_name[CMAP_KEYNAME_MAXLEN + 1];
 	size_t value_len;
 	cmap_value_types_t type;
 	const char *generic_key = "nodelist.node.X.";
 	uint32_t id;
-	
+
 	//initialize cmap handle
 	err = cmap_initialize(&cmap_handle);
 	if(err != CS_OK){
@@ -43,9 +43,12 @@ cs_error_t get_highest_node(uint32_t *highest_id)
 	//close the handles
 	(void)cmap_iter_finalize(cmap_handle, iter_handle);
 	(void)cmap_finalize(cmap_handle);
-	
+
 	return CS_OK;
 }
+
+
+// add node
 
 int add_node(char *addr)
 {
@@ -58,7 +61,7 @@ int add_node(char *addr)
 	char *nodelist = "nodelist.node.";
 	char *set_id = ".nodeid";
 	char *set_addr = ".ring0_addr";
-	
+
 	err = get_highest_node(&id);
 	if(err != CS_OK){
 		return -1;
@@ -87,6 +90,61 @@ int add_node(char *addr)
 	err = write_config("corosync.conf");
 	return err;
 }
+
+
+
+// remove node
+// we should know the id to remove the node we want
+// name the address "key" for convenience.
+int remove_node(uint32_t id){
+
+	cs_error_t err;
+	cmap_handle_t cmap_handle;
+	uint32_t i;
+	//char *str;
+	char id_key[124];
+	char id_char[32];
+	char *nodelist = "nodelist.node.";
+	char *set_id = ".nodeid";
+	//char *set_addr = ".ring0_addr";
+	sprintf(id_char, "%u", (unsigned int)id);
+
+	//key = nodelist.X.node.nodeid
+	strcpy(id_key, nodelist);
+	strcat(id_key, id_char);
+	strcat(id_key, set_id);
+
+	// initialize cmap_handle
+	err = cmap_initialize(&cmap_handle);
+	if(err != CS_OK){
+		printf("Failed to initialize cmap. Error#%d: %s\n", err, get_error(err));
+		return -1;
+	}
+
+	// get key, catch error
+	err = cmap_get_uint32(cmap_handle, id_key, &i);
+	if(err != CS_OK){
+		printf("Failed to retrieve key. Error#%d: %s\n", err, get_error(err));
+		return -1;
+	}
+	// the key exists, delete that node
+	err = cmap_delete(cmap_handle,id_key);
+	if(err != CS_OK){
+		printf("Failed to delete key. Error#%d: %s\n", err, get_error(err));
+		return -1;
+	}
+	// finalize
+	(void)cmap_finalize(cmap_handle);
+	// write to conf file
+	//err = write_config("corosync.conf");
+	return err;
+}
+
+
+
+
+
+
 
 int print_ring()
 {
@@ -149,7 +207,7 @@ int print_members()
 {
 	cs_error_t err;
 	cmap_handle_t cmap_handle;
-	cmap_iter_handle_t iter_handle; 
+	cmap_iter_handle_t iter_handle;
 	const char *membership_key = "runtime.totem.pg.mrp.srp.members.";
 	char key_name[CMAP_KEYNAME_MAXLEN + 1];
 	char prev_key_name[CMAP_KEYNAME_MAXLEN +1 ];
@@ -176,7 +234,7 @@ int print_members()
 		if(count < 0 || (unsigned int)atoi(&key_name[strlen(membership_key)]) != (unsigned int)atoi(&prev_key_name[strlen(membership_key)])){
 			count++;
 			printf("////////////////////////////////////////////////////////////////////////\n");
-			printf("%s%d\t%s%u\n", "Node_", count, "ID: ", (unsigned int)atoi(&key_name[strlen(membership_key)])); 
+			printf("%s%d\t%s%u\n", "Node_", count, "ID: ", (unsigned int)atoi(&key_name[strlen(membership_key)]));
 			printf("////////////////////////////////////////////////////////////////////////\n");
 			strcpy(&prev_key_name[strlen(membership_key)], &key_name[strlen(membership_key)]);
 		}

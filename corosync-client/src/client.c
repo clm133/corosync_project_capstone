@@ -12,7 +12,8 @@ const char *argp_program_version = "version 1.0";
 
 enum client_task {
 	status,
-	add_option
+	add_option,
+	remove_option
 }task;
 
 /* -s option prints out information regarding the following arguments: "ring", "members", "node"*/
@@ -38,7 +39,7 @@ int status_print(char *item)
 int add_options(char *item, char *value)
 {
 	int err;
-	
+
 	if(strcmp(item, "node") == 0){
 		err = add_node(value);
 		if(err != CS_OK){
@@ -53,6 +54,27 @@ int add_options(char *item, char *value)
 	return err;
 }
 
+
+// item -> "node", value -> node id
+int remove_options(char *item, char *value)
+{
+	int err;
+	uint32_t id = (uint32_t)atoi(value);
+	if(strcmp(item, "node") ==0){
+		err = remove_node(id);
+		if (err != CS_OK){
+			printf("Something went wrong removing node! Error#%d: %s\n", err, get_error(err));
+			return -1;
+		}
+		printf("Node removed successfully! \n");
+	}
+	else{
+		err = -1;
+	}
+	return err;
+}
+
+
 struct arguments
 {
 	char *argz;
@@ -63,28 +85,36 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 {
 	size_t count;
 	struct arguments *a;
-	
+
 	a = state->input;
 	switch(key){
+		//adding nodes
 		case 'a':
 			task = add_option;
 			argz_add(&a->argz, &a->argz_len, arg);
 			break;
-		
+
+		//removing nodes
+		case 'r':
+			task = remove_option;
+			argz_add(&a->argz, &a->argz_len, arg);
+			break;
+
+		//check status
 		case 's':
 			task = status;
 			argz_add(&a->argz, &a->argz_len, arg);
 			break;
-			
+
 		case ARGP_KEY_ARG:
 			argz_add(&a->argz, &a->argz_len, arg);
 			break;
-			
+
 		case ARGP_KEY_INIT:
 			a->argz = 0;
 			a->argz_len = 0;
 			break;
-		
+
 		case ARGP_KEY_END:
 			count = argz_count(a->argz, a->argz_len);
 			if(count > 2){
@@ -96,16 +126,19 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 			break;
 	}
 	return 0;
-} 
+}
 
+// example for adding node: sudo ./corosync-client -a node 11.0.0.2
+// for removing node: sudo ./corosync-client -r node 1
 int main(int argc, char **argv)
-{	
+{
 	struct argp_option options[]={
 		{ "add", 'a', "node", 0, "add a node with address arguement to the cluster"},
+		{"remove", 'r', "node", 0, "remove a node with known key"},
 		{ "status", 's', "members/quorum/ring/node", 0, "prints status of supplied arguments"},
 		{0}
 	};
-	
+
 	struct argp argp = {options, parse_opt, 0, 0, 0, 0, 0};
 	struct arguments arguments;
 	printf("\n");
@@ -118,7 +151,7 @@ int main(int argc, char **argv)
 		}
 		free(arguments.argz);
 	}
-	
+
 	else if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && task == add_option){
 		const char *prev = NULL;
 		char *item;
@@ -130,5 +163,18 @@ int main(int argc, char **argv)
 		}
 		free(arguments.argz);
 	}
+
+	else if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && task == remove_option){
+		const char *prev = NULL;
+		char *item;
+		char *value;
+		while((item = argz_next(arguments.argz, arguments.argz_len, prev))){
+			value = argz_next(arguments.argz, arguments.argz_len, item);
+			remove_options(item, value);
+			prev = value;
+		}
+		free(arguments.argz);
+	}
+
 	return 0;
-} 
+}
