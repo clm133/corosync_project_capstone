@@ -2,6 +2,82 @@
 #include "client_errors.h"
 #include "modified_cmapctl.h"
 #include "conf_writer.h"
+#include "ssh_manager.h"
+
+int update_all_members()
+{
+	cs_error_t err;
+	cmap_handle_t cmap_handle;
+	cmap_iter_handle_t iter_handle;
+	const char *nodelist_key = "nodelist.node";
+	char key_name[CMAP_KEYNAME_MAXLEN + 1];
+	char prev_key_name[CMAP_KEYNAME_MAXLEN +1 ];
+	size_t value_len;
+	cmap_value_types_t type;
+	char *addr;
+	char **nodes;
+	int count;
+	int i;
+	int j;
+
+	//initialize cmap handle
+	err = cmap_initialize(&cmap_handle);
+	if(err != CS_OK){
+		printf("Failed to initialize cmap. Error#%d: %s\n", err, get_error(err));
+		return err;
+	}
+	//initialize iterator handle (we are looking for members)
+	err = cmap_iter_init(cmap_handle, nodelist_key, &iter_handle);
+	if(err != CS_OK){
+		printf("Failed to initialize iterator. Error#%d: %s\n", err, get_error(err));
+		(void)cmap_finalize(cmap_handle);
+		return err;
+	}
+	count = 0;
+	//count the number of nodes left in nodelist
+	while((err = cmap_iter_next(cmap_handle, iter_handle, key_name, &value_len, &type)) == CS_OK){
+		if(strcmp(&key_name[strlen(nodelist_key) + 3], "ring0_addr") == 0){
+			count++;
+		}
+	}
+	(void)cmap_iter_finalize(cmap_handle, iter_handle);
+	//initialize iterator handle (we are looking for node addresses now)
+	err = cmap_iter_init(cmap_handle, nodelist_key, &iter_handle);
+	if(err != CS_OK){
+		printf("Failed to initialize iterator. Error#%d: %s\n", err, get_error(err));
+		(void)cmap_finalize(cmap_handle);
+		return err;
+	}
+	//malloc nodes list to hold all addresses
+	nodes = malloc(sizeof(char *) * count);
+	i = 0;
+	while((err = cmap_iter_next(cmap_handle, iter_handle, key_name, &value_len, &type)) == CS_OK){
+		if(strcmp(&key_name[strlen(nodelist_key) + 3], "ring0_addr") == 0){
+			//malloc address
+			addr = NULL;
+			nodes[i] = malloc(value_len * sizeof(char));
+			for(j = 0; j < value_len; j++){
+				nodes[i][j] = (char)0;
+			}
+			cmap_get_string(cmap_handle, key_name, &addr);
+			strncpy(nodes[i], addr, value_len - 1);
+			i++;
+			free(addr);
+		}
+	}
+	//finally move through our list. shutting off corosync, sftp-ing the new conf file, and starting corosync up again
+	for(i = 0; i < count; i++){
+		copy_conf(nodes[i]);
+		stop_corosync(nodes[i]);
+		start_corosync(nodes[i]);
+		free(nodes[i]);
+	}
+	free(nodes);
+	//close the handles
+	(void)cmap_iter_finalize(cmap_handle, iter_handle);
+	(void)cmap_finalize(cmap_handle);
+	return 1;
+}
 
 cs_error_t get_highest_node(uint32_t *highest_id)
 {
@@ -47,16 +123,14 @@ cs_error_t get_highest_node(uint32_t *highest_id)
 	return CS_OK;
 }
 
-
 // add node
-
 int add_node(char *addr)
 {
 	cs_error_t err;
 	cmap_handle_t cmap_handle;
 	uint32_t id;
-	char set_id_key[124];
-	char set_ring0_key[124];
+	char set_id_key[128];
+	char set_ring0_key[128];
 	char id_char[32];
 	char *nodelist = "nodelist.node.";
 	char *set_id = ".nodeid";
@@ -88,10 +162,9 @@ int add_node(char *addr)
 	(void)cmap_finalize(cmap_handle);
 	//write to conf file
 	err = write_config("corosync.conf");
+	err = update_all_members();
 	return err;
 }
-
-
 
 // remove node
 // we should know the id to remove the node we want
@@ -100,19 +173,34 @@ int remove_node(uint32_t id){
 
 	cs_error_t err;
 	cmap_handle_t cmap_handle;
-	uint32_t i;
-	//char *str;
-	char id_key[124];
+	char id_addr[128];
+	char id_key[128];
 	char id_char[32];
 	char *nodelist = "nodelist.node.";
 	char *set_id = ".nodeid";
-	//char *set_addr = ".ring0_addr";
-	sprintf(id_char, "%u", (unsigned int)id);
-
+	char *set_addr = ".ring0_addr";
+	char *str;
+	char *removeAddr;
+	int i;
+	for(i = 0; i < 128; i++){
+		id_addr[i] = (char)0;
+	}
+	for(i = 0; i < 128; i++){
+		id_key[i] = (char)0;
+	}
+	for(i = 0; i < 32; i++){
+		id_char[i] = (char)0;
+	}
+	sprintf(id_char, "%u", ((unsigned int)id) - 1);
+	
 	//key = nodelist.X.node.nodeid
 	strcpy(id_key, nodelist);
 	strcat(id_key, id_char);
 	strcat(id_key, set_id);
+	strcat(id_addr, nodelist);
+	strcat(id_addr, id_char);
+	strcat(id_addr, set_addr);
+	
 
 	// initialize cmap_handle
 	err = cmap_initialize(&cmap_handle);
@@ -120,31 +208,49 @@ int remove_node(uint32_t id){
 		printf("Failed to initialize cmap. Error#%d: %s\n", err, get_error(err));
 		return -1;
 	}
-
+	
+	str = NULL;
+	cmap_get_string(cmap_handle, id_addr, &str);
+	removeAddr = malloc(strlen(str)* sizeof(char) + 1);
+	for(i = 0; i < strlen(str) + 1; i++){
+		removeAddr[i] = (char)0;
+	}
+	strncpy(removeAddr, str, strlen(str));
+	free(str);
+	printf("This is the string you got: %s\n", removeAddr);
+	/*
 	// get key, catch error
 	err = cmap_get_uint32(cmap_handle, id_key, &i);
 	if(err != CS_OK){
 		printf("Failed to retrieve key. Error#%d: %s\n", err, get_error(err));
 		return -1;
 	}
+	*/
 	// the key exists, delete that node
-	err = cmap_delete(cmap_handle,id_key);
+	err = cmap_delete(cmap_handle,id_addr);
 	if(err != CS_OK){
-		printf("Failed to delete key. Error#%d: %s\n", err, get_error(err));
+		printf("Failed to delete key:%s. Error#%d: %s\n", id_addr, err, get_error(err));
+		free(removeAddr);
 		return -1;
 	}
+	err = cmap_delete(cmap_handle, id_key);
+	if(err != CS_OK){
+		printf("Failed to delete key:%s. Error#%d: %s\n", id_key, err, get_error(err));
+		free(removeAddr);
+		return -1;
+	}
+	
 	// finalize
 	(void)cmap_finalize(cmap_handle);
-	// write to conf file
-	//err = write_config("corosync.conf");
+	//shut off removed node
+	stop_corosync(removeAddr);
+	//write to conf file
+	err = write_config("corosync.conf");
+	err = update_all_members();
+	free(removeAddr);
 	return err;
+	
 }
-
-
-
-
-
-
 
 int print_ring()
 {
