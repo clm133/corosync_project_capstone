@@ -10,6 +10,6 @@
 
 int start_corosync(char *addr);
 int stop_corosync(char *addr);
-int copy_conf(char *addr);
+int copy_conf(char *addr, char *source_file);
 
 #endif /* SSH_MANAGER_H */

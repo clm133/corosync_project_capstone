@@ -1,6 +1,7 @@
 #include "cluster_manager.h"
 #include "client_errors.h"
 #include "modified_cmapctl.h"
+#include "modified_cfgtool.h"
 #include "conf_writer.h"
 #include "ssh_manager.h"
 
@@ -68,7 +69,7 @@ int update_all_members()
 	//finally move through our list. shutting off corosync, sftp-ing the new conf file, and starting corosync up again
 	for(i = 0; i < count; i++){
 		printf("updating node %s...", nodes[i]);
-		copy_conf(nodes[i]);
+		copy_conf(nodes[i], "corosync.conf");
 		stop_corosync(nodes[i]);
 		start_corosync(nodes[i]);
 		printf("successful!\n");
@@ -181,8 +182,8 @@ int remove_node(uint32_t id){
 	char *nodelist = "nodelist.node.";
 	char *set_id = ".nodeid";
 	char *set_addr = ".ring0_addr";
-	char *str;
-	char *removeAddr;
+	char removeAddr[INET6_ADDRSTRLEN];
+	unsigned int id_check;
 	int i;
 	for(i = 0; i < 128; i++){
 		id_addr[i] = (char)0;
@@ -203,41 +204,39 @@ int remove_node(uint32_t id){
 	strcat(id_addr, id_char);
 	strcat(id_addr, set_addr);
 	
-
 	// initialize cmap_handle
 	err = cmap_initialize(&cmap_handle);
 	if(err != CS_OK){
 		printf("Failed to initialize cmap. Error#%d: %s\n", err, get_error(err));
 		return -1;
 	}
-	
-	str = NULL;
-	cmap_get_string(cmap_handle, id_addr, &str);
-	removeAddr = malloc(strlen(str)* sizeof(char) + 1);
-	for(i = 0; i < strlen(str) + 1; i++){
-		removeAddr[i] = (char)0;
-	}
-	strncpy(removeAddr, str, strlen(str));
-	free(str);
-	/*
-	// get key, catch error
-	err = cmap_get_uint32(cmap_handle, id_key, &i);
-	if(err != CS_OK){
-		printf("Failed to retrieve key. Error#%d: %s\n", err, get_error(err));
+	//save ip addr of node we are removing for later
+	err = get_addr((int)id, removeAddr);
+	if(err == -1){
+		printf("Failed to find node\n");
+		(void)cmap_finalize(cmap_handle);
 		return -1;
 	}
-	*/
+	
+	// get key, catch error
+	err = cmap_get_uint32(cmap_handle, id_key, &id_check);
+	if(err != CS_OK){
+		printf("Failed to retrieve key. Error#%d: %s\n", err, get_error(err));
+		(void)cmap_finalize(cmap_handle);
+		return -1;
+	}
+	
 	// the key exists, delete that node
 	err = cmap_delete(cmap_handle,id_addr);
 	if(err != CS_OK){
 		printf("Failed to delete key:%s. Error#%d: %s\n", id_addr, err, get_error(err));
-		free(removeAddr);
+		(void)cmap_finalize(cmap_handle);
 		return -1;
 	}
 	err = cmap_delete(cmap_handle, id_key);
 	if(err != CS_OK){
 		printf("Failed to delete key:%s. Error#%d: %s\n", id_key, err, get_error(err));
-		free(removeAddr);
+		(void)cmap_finalize(cmap_handle);
 		return -1;
 	}
 	
@@ -245,14 +244,13 @@ int remove_node(uint32_t id){
 	(void)cmap_finalize(cmap_handle);
 	//shut off removed node
 	printf("Removing and shutting off node %s...", removeAddr);
+	copy_conf(removeAddr, "../conf_templates/default.conf");
 	stop_corosync(removeAddr);
 	printf("success!\n");
 	//write to conf file
 	err = write_config("corosync.conf");
 	err = update_all_members();
-	free(removeAddr);
 	return err;
-	
 }
 
 int print_ring()
@@ -317,12 +315,17 @@ int print_members()
 	cs_error_t err;
 	cmap_handle_t cmap_handle;
 	cmap_iter_handle_t iter_handle;
+	char addr[INET6_ADDRSTRLEN];
+	char joined[32];
+	char *str;
 	const char *membership_key = "runtime.totem.pg.mrp.srp.members.";
+	const char *joined_key = "runtime.totem.pg.mrp.srp.members.";
 	char key_name[CMAP_KEYNAME_MAXLEN + 1];
 	char prev_key_name[CMAP_KEYNAME_MAXLEN +1 ];
 	size_t value_len;
 	cmap_value_types_t type;
 	int count;
+	int i;
 
 	//initialize cmap handle
 	err = cmap_initialize(&cmap_handle);
@@ -343,15 +346,56 @@ int print_members()
 	while((err = cmap_iter_next(cmap_handle, iter_handle, key_name, &value_len, &type)) == CS_OK){
 		if(count < 0 || (unsigned int)atoi(&key_name[strlen(membership_key)]) != (unsigned int)atoi(&prev_key_name[strlen(membership_key)])){
 			count++;
+			get_addr(atoi(&key_name[strlen(membership_key)]), addr);
 			printf("////////////////////////////////////////////////////////////////////////\n");
-			printf("%s%d\t%s%u\n", "Node_", count, "ID: ", (unsigned int)atoi(&key_name[strlen(membership_key)]));
+			printf("%s%u\n", "Node_", (unsigned int)atoi(&key_name[strlen(membership_key)])); 
 			printf("////////////////////////////////////////////////////////////////////////\n");
+			printf("%s%u\n", "ID: ", (unsigned int)atoi(&key_name[strlen(membership_key)]));
+			printf("%s%s\n", "IP_ADDR: ", addr);
 			strcpy(&prev_key_name[strlen(membership_key)], &key_name[strlen(membership_key)]);
 		}
-		print_key(cmap_handle, key_name, value_len, NULL ,type);
+		if(strcmp(&key_name[strlen(joined_key) + 2], "status") == 0){
+			str = NULL;
+			for(i = 0; i < 32; i++){
+				joined[i] = (char)0;
+			}
+			cmap_get_string(cmap_handle, key_name, &str);
+			strncpy(joined, str, 31);
+			free(str);
+			printf("STATUS: %s\n", joined);
+		}
 	}
 	//close the handles
 	(void)cmap_iter_finalize(cmap_handle, iter_handle);
 	(void)cmap_finalize(cmap_handle);
 	return err;
+}
+
+int reset_cluster(char *path_to_conf)
+{
+	uint32_t highest_id;
+	unsigned int id_to_remove;
+	char addr[INET6_ADDRSTRLEN];
+	int i;
+	
+	for(i = 0; i < INET6_ADDRSTRLEN; i++){
+			addr[i] = (char)0;
+		}
+	get_highest_node(&highest_id);
+	while(highest_id != 0){
+		get_addr((int)highest_id, addr);
+		stop_corosync(addr);
+		copy_conf(addr, path_to_conf);
+		printf("Reset nodeid %u\n", (unsigned int)highest_id);
+		highest_id--;
+		for(i = 0; i < INET6_ADDRSTRLEN; i++){
+			addr[i] = (char)0;
+		}
+	}
+	/*
+	get_addr(highest_id, addr);
+	stop_corosync(addr);
+	copy_conf(addr, path_to_conf);
+	*/
+	return 1;
 }

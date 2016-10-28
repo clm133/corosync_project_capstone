@@ -6,7 +6,9 @@
 #include "cluster_manager.h"
 #include "client_errors.h"
 #include "modified_cmapctl.h"
+#include "modified_cfgtool.h"
 #include "ssh_manager.h"
+
 
 const char *argp_program_bug_address = "charliemietzner@gmail.com";
 const char *argp_program_version = "version 1.0";
@@ -61,6 +63,7 @@ int add_options(char *item, char *value)
 int ssh_command(char *item, char *value)
 {
 	int err;
+	char addr[INET6_ADDRSTRLEN];
 	//start corosync
 	if(strcmp(item, "start") == 0){
 		printf("starting corosync at node %s...\n", value);
@@ -79,6 +82,15 @@ int ssh_command(char *item, char *value)
 			return -1;
 		}
 		printf("success!\n\n");
+	}
+	if(strcmp(item, "reset") == 0){
+		printf("Resetting cluster...\n");
+		err = reset_cluster(value);
+		if(err != 1){
+			printf("error resetting cluster\n");
+			return -1;
+		}
+		printf("success!\n");
 	}
 	
 	return 1;

@@ -142,7 +142,7 @@ int stop_corosync(char *addr)
     return 1;
 }
 
-int sftp_conf(ssh_session session)
+int sftp_conf(ssh_session session, char *source_file)
 {
 	int access;
 	FILE *source;
@@ -158,7 +158,7 @@ int sftp_conf(ssh_session session)
 	//establish access types
 	access = O_WRONLY | O_CREAT | O_TRUNC;
 	//get size of source conf file
-	stat("corosync.conf", &st);
+	stat(source_file, &st);
 	conf_size = st.st_size;
 	//Create sftp session
 	sftp = sftp_new(session);
@@ -180,7 +180,7 @@ int sftp_conf(ssh_session session)
 		return -1;
 	}
 	//open our source corosync.conf file
-	source = fopen("corosync.conf", "r");
+	source = fopen(source_file, "r");
 	if(source == NULL){
 		printf("Could not open file in local directory.\n");
 		sftp_close(dest);
@@ -208,7 +208,7 @@ int sftp_conf(ssh_session session)
 	return 1;
 }
 
-int copy_conf(char *addr)
+int copy_conf(char *addr, char *source_file)
 {
 	ssh_session session;
     int rc;
@@ -239,7 +239,7 @@ int copy_conf(char *addr)
 		return -1;
 	}
 	//sftp corosync.conf file
-	rc = sftp_conf(session);
+	rc = sftp_conf(session, source_file);
 	if(rc == -1){
 		printf("something went wrong trying to sftp the conf file\n");
     	free_session(session);
