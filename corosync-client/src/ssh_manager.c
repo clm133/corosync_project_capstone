@@ -239,7 +239,7 @@ int copy_conf(char *addr, char *source_file)
 		return -1;
 	}
 	//sftp corosync.conf file
-	rc = sftp_conf(session, source_file);
+	rc = sftp_conf(session, "corosync.conf");
 	if(rc == -1){
 		printf("something went wrong trying to sftp the conf file\n");
     	free_session(session);
