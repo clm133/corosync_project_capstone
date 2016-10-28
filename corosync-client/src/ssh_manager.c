@@ -68,13 +68,12 @@ int start_corosync(char *addr)
 	//read in stuff (if anything)
     nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
     while (nbytes > 0) {
-        fwrite(buffer, 1, nbytes, stdout);
+        //fwrite(buffer, 1, nbytes, stdout);
         nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
     }
 	//success - free everything
     free_channel(channel);
     free_session(session);
-
     return 1;
 }
 
@@ -134,13 +133,12 @@ int stop_corosync(char *addr)
 	//read in stuff (if anything)
     nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
     while (nbytes > 0) {
-        fwrite(buffer, 1, nbytes, stdout);
+        //fwrite(buffer, 1, nbytes, stdout);
         nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
     }
 	//success - free everything
     free_channel(channel);
     free_session(session);
-
     return 1;
 }
 
@@ -249,6 +247,5 @@ int copy_conf(char *addr)
 	}
 	//success - free everything
     free_session(session);
-	printf("corosync.conf file successfully updated at destination %s\n", addr);
     return 1;
 }

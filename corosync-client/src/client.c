@@ -43,12 +43,13 @@ int add_options(char *item, char *value)
 	int err;
 
 	if(strcmp(item, "node") == 0){
+		printf("adding node %s...\n", value);
 		err = add_node(value);
 		if(err != CS_OK){
 			printf("something went wrong adding node! Error#%d: %s\n", err, get_error(err));
 			return -1;
 		}
-		printf("Node added successfully.\n");
+		printf("success!\n\n");
 	}
 	else{
 		err = -1;
@@ -62,21 +63,25 @@ int ssh_command(char *item, char *value)
 	int err;
 	//start corosync
 	if(strcmp(item, "start") == 0){
+		printf("starting corosync at node %s...\n", value);
 		err = start_corosync(value);
 		if(err != 1){
 			printf("something went wrong with ssh\n");
 			return -1;
 		}
-		printf("Started corosync at node %s\n", value);
+		printf("success!\n\n");
 	}
 	if(strcmp(item, "stop") == 0){
-		err = start_corosync(value);
+		printf("shutting off corosync at node %s...\n", value);
+		err = stop_corosync(value);
 		if(err != 1){
-			printf("something went wrong with ssh\n");
+			printf("something went wrong with ssh!\n");
 			return -1;
 		}
-		printf("Stopped corosync at node %s\n", value);
+		printf("success!\n\n");
 	}
+	
+	return 1;
 }
 
 // item -> "node", value -> node id
@@ -85,12 +90,13 @@ int remove_options(char *item, char *value)
 	int err;
 	uint32_t id = (uint32_t)atoi(value);
 	if(strcmp(item, "node") == 0){
+		printf("removing nodeid %s...\n", value);
 		err = remove_node(id);
 		if (err != CS_OK){
 			printf("Something went wrong removing node! Error#%d: %s\n", err, get_error(err));
 			return -1;
 		}
-		printf("Node removed successfully! \n");
+		printf("success!\n\n");
 	}
 	else{
 		err = -1;

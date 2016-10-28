@@ -67,9 +67,11 @@ int update_all_members()
 	}
 	//finally move through our list. shutting off corosync, sftp-ing the new conf file, and starting corosync up again
 	for(i = 0; i < count; i++){
+		printf("updating node %s...", nodes[i]);
 		copy_conf(nodes[i]);
 		stop_corosync(nodes[i]);
 		start_corosync(nodes[i]);
+		printf("successful!\n");
 		free(nodes[i]);
 	}
 	free(nodes);
@@ -242,7 +244,9 @@ int remove_node(uint32_t id){
 	// finalize
 	(void)cmap_finalize(cmap_handle);
 	//shut off removed node
+	printf("Removing and shutting off node %s...", removeAddr);
 	stop_corosync(removeAddr);
+	printf("success!\n");
 	//write to conf file
 	err = write_config("corosync.conf");
 	err = update_all_members();
@@ -276,7 +280,7 @@ int print_ring()
 		return err;
 	}
 	else{
-		printf("%s\t%s%u\n", "Local_node", "ID: ", node_id);
+		printf("%s\t%s%u\n", "local_node", "ID: ", node_id);
 	}
 	//Try to retrieve ring status
 	err = corosync_cfg_ring_status_get(handle, &names, &status, &count);
@@ -334,6 +338,7 @@ int print_members()
 		return err;
 	}
 	count = -1;
+	printf("PRINTING MEMBERSHIP STATUS:\n");
 	//print the members
 	while((err = cmap_iter_next(cmap_handle, iter_handle, key_name, &value_len, &type)) == CS_OK){
 		if(count < 0 || (unsigned int)atoi(&key_name[strlen(membership_key)]) != (unsigned int)atoi(&prev_key_name[strlen(membership_key)])){
