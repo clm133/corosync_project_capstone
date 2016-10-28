@@ -217,7 +217,6 @@ int remove_node(uint32_t id){
 	}
 	strncpy(removeAddr, str, strlen(str));
 	free(str);
-	printf("This is the string you got: %s\n", removeAddr);
 	/*
 	// get key, catch error
 	err = cmap_get_uint32(cmap_handle, id_key, &i);
