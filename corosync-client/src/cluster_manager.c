@@ -132,8 +132,6 @@ int add_node(char *addr)
 	cs_error_t err;
 	cmap_handle_t cmap_handle;
 	uint32_t id;
-	uint32_t votes = 2; //Default will be 2
-	uint32_t epsilon = 0; //Default will be 0 (is not epsilon)
 	char set_id_key[128];
 	char set_votes_key[128];
 	char set_epsilon_key[128];
@@ -175,8 +173,8 @@ int add_node(char *addr)
 		return -1;
 	}
 	cmap_set_uint32(cmap_handle, set_id_key, id);
-	cmap_set_uint32(cmap_handle, set_votes_key, votes);
-	cmap_set_uint32(cmap_handle, set_epsilon_key, epsilon);
+	cmap_set_uint32(cmap_handle, set_votes_key, 2);
+	cmap_set_string(cmap_handle, set_epsilon_key, "no");
 	cmap_set_string(cmap_handle, set_ring0_key, addr);
 	(void)cmap_finalize(cmap_handle);
 	//write to conf file
@@ -205,7 +203,7 @@ int remove_node(uint32_t id){
 	char removeAddr[INET6_ADDRSTRLEN];
 	unsigned int id_check;
 	unsigned int votes_check;
-	unsigned int epsilon_check;
+	char *epsilon_check;
 	int i;
 	for(i = 0; i < 128; i++){
 		id_addr[i] = (char)0;
@@ -269,7 +267,7 @@ int remove_node(uint32_t id){
 	}
 	
 	// get epsilon, catch error
-	err = cmap_get_uint32(cmap_handle, epsilon_key, &epsilon_check);
+	err = cmap_get_string(cmap_handle, epsilon_key, &epsilon_check);
 	if(err != CS_OK){
 		printf("Failed to retrieve key. Error#%d: %s\n", err, get_error(err));
 		(void)cmap_finalize(cmap_handle);

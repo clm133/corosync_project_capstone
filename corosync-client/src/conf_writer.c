@@ -72,9 +72,9 @@ cs_error_t write_logging(FILE *fp)
 	return CS_OK;
 }
 
-cs_error_t write_node(FILE *fp, uint32_t id, uint32_t votes, uint32_t epsilon, char *ring0_addr)
+cs_error_t write_node(FILE *fp, uint32_t id, uint32_t votes, char *epsilon, char *ring0_addr)
 {
-	fprintf(fp,"\n\tnode {\n\t\tnodeid: %u\n\t\tquorum_votes: %u\n\t\tis_epsilon: %u\n\t\tring0_addr: %s\n\t}", id, votes, epsilon, ring0_addr);
+	fprintf(fp,"\n\tnode {\n\t\tnodeid: %u\n\t\tquorum_votes: %u\n\t\tis_epsilon: %s\n\t\tring0_addr: %s\n\t}", id, votes, epsilon, ring0_addr);
 	return CS_OK;
 }
 
@@ -88,7 +88,7 @@ cs_error_t write_nodelist(FILE *fp)
 	char *addr[64];
 	uint32_t id;
 	uint32_t votes;
-	uint32_t epsilon;
+	char *epsilon[64];
 	char key_name[CMAP_KEYNAME_MAXLEN + 1];
 	const char *generic_key = "nodelist.node.X.";
 	const char *nodelist_start = "nodelist {";
@@ -123,14 +123,14 @@ cs_error_t write_nodelist(FILE *fp)
 		//find is_epsilon
 		else if(strcmp(&key_name[strlen(generic_key)], "is_epsilon") == 0){
 			//get quorum_votes
-			err = cmap_get_uint32(cmap_handle, key_name, &epsilon);
+			err = cmap_get_string(cmap_handle, key_name, epsilon);
 		}
 		//find ring0_addr
 		else if(strcmp(&key_name[strlen(generic_key)], "ring0_addr") == 0){
 			//get ring0_addr
 			err = cmap_get_string(cmap_handle, key_name, addr);
 			//have nodeid and ring0_addr, write node {} to file
-			err = write_node(fp, id, votes, epsilon, addr[0]);
+			err = write_node(fp, id, votes, epsilon[0], addr[0]);
 		}
 	}
 	//close nodelist directive
