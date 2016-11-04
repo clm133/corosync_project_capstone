@@ -6,6 +6,7 @@
 #include "cluster_manager.h"
 #include "client_errors.h"
 #include "modified_cmapctl.h"
+#include <pthread.h>
 
 const char *argp_program_bug_address = "charliemietzner@gmail.com";
 const char *argp_program_version = "version 1.0";
@@ -13,7 +14,9 @@ const char *argp_program_version = "version 1.0";
 enum client_task {
 	status,
 	add_option,
-	remove_option
+	remove_option,
+	mark_elig,
+	mark_inelig
 }task;
 
 /* -s option prints out information regarding the following arguments: "ring", "members", "node"*/
@@ -73,7 +76,55 @@ int remove_options(char *item, char *value)
 	}
 	return err;
 }
-
+int mark_ineligible (char *value){
+	int ret;
+	uint32_t id = (uint32_t)atoi(value);
+	votequorum_handle_t vq_h;
+	votequorum_callbacks_t vq_cb;
+	votequorum_initialize(&vq_h, &vq_cb);
+	struct votequorum_info info;
+	ret = votequorum_getinfo( vq_h, id, &info); 
+	if(ret == CS_OK){
+		ret = votequorum_setexpected(vq_h, info.node_expected_votes-1);
+	}
+	if(ret == CS_OK) {
+		ret = votequorum_setvotes( vq_h, info.node_id, 0);
+	}
+	if( ret == CS_OK ){
+		ret = votequorum_getinfo( vq_h, id, &info); 
+		printf("expected votes: %d\n", info.node_expected_votes);
+		printf("number votes: %d\n", info.node_votes);	
+	}
+		
+	return ret; 
+}
+int mark_eligible ( char *value){
+	int ret;
+	uint32_t id =(uint32_t)atoi(value);
+	votequorum_callbacks_t vq_cb;
+	votequorum_handle_t vq_h;
+	votequorum_initialize( &vq_h, &vq_cb);
+	struct votequorum_info info;
+	ret = votequorum_getinfo( vq_h, id, &info);
+	if( ret == CS_OK){
+		printf("previous votes for node were: %d\n", info.node_votes);
+		printf("previous expected votes were: %d\n", info.node_expected_votes);
+		ret = votequorum_setvotes(vq_h, id, 1);
+		if (ret == CS_OK){
+			votequorum_setexpected( vq_h, info.node_expected_votes+1);
+		}
+		
+		if (ret == CS_OK){
+			ret = votequorum_getinfo( vq_h, id, &info);
+					
+		printf("votes now set at: %d\n", info.node_votes);
+		printf("expected votes now set at: %d\n", info.node_expected_votes);
+		}
+		return ret;
+	}
+	else
+		return ret;
+}
 
 struct arguments
 {
@@ -103,6 +154,18 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		//check status
 		case 's':
 			task = status;
+			argz_add(&a->argz, &a->argz_len, arg);
+			break;
+
+		//mark node eligible
+		case 'e':
+			task = mark_elig;
+			argz_add(&a->argz, &a->argz_len, arg);
+			break;
+
+		//mark node ineligible			
+		case 'i':
+			task = mark_inelig;					
 			argz_add(&a->argz, &a->argz_len, arg);
 			break;
 
@@ -136,6 +199,8 @@ int main(int argc, char **argv)
 		{ "add", 'a', "node", 0, "add a node with address arguement to the cluster"},
 		{"remove", 'r', "node", 0, "remove a node with known key"},
 		{ "status", 's', "members/quorum/ring/node", 0, "prints status of supplied arguments"},
+		{"mark_elig", 'e', "node", 0,"mark node eligible in cluster"},
+		{"mark_inelig", 'i',"node" ,0, "mark node ineligible in cluster"},
 		{0}
 	};
 
@@ -175,6 +240,29 @@ int main(int argc, char **argv)
 		}
 		free(arguments.argz);
 	}
+	else if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && task == mark_elig){
+		const char *prev = NULL;
+		char *item;
+		char *value;
+		while((item = argz_next(arguments.argz, arguments.argz_len, prev))){
+			value = argz_next(arguments.argz, arguments.argz_len, item);
+			mark_eligible(value);
+			prev = value;
+		}
+		free(arguments.argz);
+		
+	}
+	else if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && task == mark_inelig){
+		const char *prev = NULL;
+		char *item;
+		char *value;
+		while((item = argz_next(arguments.argz, arguments.argz_len, prev))){
+			value = argz_next(arguments.argz, arguments.argz_len, item);
+			mark_ineligible(value);
+			prev = value;
+		}
+		free(arguments.argz);
 
+	}
 	return 0;
 }

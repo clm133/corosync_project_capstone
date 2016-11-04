@@ -3,7 +3,7 @@ CC = gcc
 ## Includes
 INC = -Iinc -Iinc/corosync -Iinc/libqb -Iinc/libqb/qb -Iinc/corosync/totem
 ## Libraries
-STATLIBS = lib/libcmap.a lib/libcorosync_common.a lib/libqb.a lib/libcfg.a
+STATLIBS = lib/libcmap.a lib/libcorosync_common.a lib/libqb.a lib/libcfg.a lib/libvotequorum.a
 GLIBS = -lpthread -ldl
 ## Directories
 IDIR = inc
