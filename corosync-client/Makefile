@@ -3,7 +3,7 @@ CC = gcc
 ## Includes
 INC = -Iinc -Iinc/corosync -Iinc/libqb -Iinc/libqb/qb -Iinc/corosync/totem -Iinc/libssh
 ## Libraries
-STATLIBS = lib/libcmap.a lib/libcorosync_common.a lib/libqb.a lib/libcfg.a /usr/lib/x86_64-linux-gnu/libssh.so
+STATLIBS = lib/libcmap.a lib/libcorosync_common.a lib/libqb.a lib/libcfg.a lib/libvotequorum.a /usr/lib/x86_64-linux-gnu/libssh.so
 SHAREDLIBS = -L/usr/lib/x86_64-linux-gnu/
 GLIBS = -lpthread -ldl
 ## Directories
