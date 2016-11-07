@@ -16,7 +16,9 @@
 #include <corosync/votequorum.h>
 
 int add_node(char *addr);
+int remove_node(uint32_t id);
 int print_ring();
 int print_members();
+int reset_cluster(char *path_to_conf);
 
 #endif /* CLUSTER_MANAGER_H */

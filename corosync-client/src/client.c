@@ -6,6 +6,8 @@
 #include "cluster_manager.h"
 #include "client_errors.h"
 #include "modified_cmapctl.h"
+#include "modified_cfgtool.h"
+#include "ssh_manager.h"
 #include <pthread.h>
 
 const char *argp_program_bug_address = "charliemietzner@gmail.com";
@@ -15,6 +17,7 @@ enum client_task {
 	status,
 	add_option,
 	remove_option,
+	ssh_cmd,
 	mark_elig,
 	mark_inelig
 }task;
@@ -44,12 +47,13 @@ int add_options(char *item, char *value)
 	int err;
 
 	if(strcmp(item, "node") == 0){
+		printf("adding node %s...\n", value);
 		err = add_node(value);
 		if(err != CS_OK){
 			printf("something went wrong adding node! Error#%d: %s\n", err, get_error(err));
 			return -1;
 		}
-		printf("Node added successfully.\n");
+		printf("success!\n\n");
 	}
 	else{
 		err = -1;
@@ -57,25 +61,63 @@ int add_options(char *item, char *value)
 	return err;
 }
 
+//item = type of command, value = ip address
+int ssh_command(char *item, char *value)
+{
+	int err;
+	char addr[INET6_ADDRSTRLEN];
+	//start corosync
+	if(strcmp(item, "start") == 0){
+		printf("starting corosync at node %s...\n", value);
+		err = start_corosync(value);
+		if(err != 1){
+			printf("something went wrong with ssh\n");
+			return -1;
+		}
+		printf("success!\n\n");
+	}
+	if(strcmp(item, "stop") == 0){
+		printf("shutting off corosync at node %s...\n", value);
+		err = stop_corosync(value);
+		if(err != 1){
+			printf("something went wrong with ssh!\n");
+			return -1;
+		}
+		printf("success!\n\n");
+	}
+	if(strcmp(item, "reset") == 0){
+		printf("Resetting cluster...\n");
+		err = reset_cluster(value);
+		if(err != 1){
+			printf("error resetting cluster\n");
+			return -1;
+		}
+		printf("success!\n");
+	}
+	
+	return 1;
+}
 
 // item -> "node", value -> node id
 int remove_options(char *item, char *value)
 {
 	int err;
 	uint32_t id = (uint32_t)atoi(value);
-	if(strcmp(item, "node") ==0){
+	if(strcmp(item, "node") == 0){
+		printf("removing nodeid %s...\n", value);
 		err = remove_node(id);
 		if (err != CS_OK){
 			printf("Something went wrong removing node! Error#%d: %s\n", err, get_error(err));
 			return -1;
 		}
-		printf("Node removed successfully! \n");
+		printf("success!\n\n");
 	}
 	else{
 		err = -1;
 	}
 	return err;
 }
+
 int mark_ineligible (char *value){
 	int ret;
 	uint32_t id = (uint32_t)atoi(value);
@@ -98,6 +140,7 @@ int mark_ineligible (char *value){
 		
 	return ret; 
 }
+
 int mark_eligible ( char *value){
 	int ret;
 	uint32_t id =(uint32_t)atoi(value);
@@ -142,6 +185,11 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		//adding nodes
 		case 'a':
 			task = add_option;
+			argz_add(&a->argz, &a->argz_len, arg);
+			break;
+		//sending ssh commands (currently just "start" or "stop")	
+		case 'c':
+			task = ssh_cmd;
 			argz_add(&a->argz, &a->argz_len, arg);
 			break;
 
@@ -197,16 +245,17 @@ int main(int argc, char **argv)
 {
 	struct argp_option options[]={
 		{ "add", 'a', "node", 0, "add a node with address arguement to the cluster"},
-		{"remove", 'r', "node", 0, "remove a node with known key"},
+		{"remove", 'r', "node", 0, "remove a node according to nodeid"},
+		{"command", 'c', "start/stop", 0, "starts or stops corosync at specified ip address"},
 		{ "status", 's', "members/quorum/ring/node", 0, "prints status of supplied arguments"},
 		{"mark_elig", 'e', "node", 0,"mark node eligible in cluster"},
 		{"mark_inelig", 'i',"node" ,0, "mark node ineligible in cluster"},
 		{0}
 	};
-
 	struct argp argp = {options, parse_opt, 0, 0, 0, 0, 0};
 	struct arguments arguments;
 	printf("\n");
+	//status
 	if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && task == status){
 		const char *prev = NULL;
 		char *item;
@@ -216,7 +265,7 @@ int main(int argc, char **argv)
 		}
 		free(arguments.argz);
 	}
-
+	//add_option
 	else if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && task == add_option){
 		const char *prev = NULL;
 		char *item;
@@ -228,7 +277,7 @@ int main(int argc, char **argv)
 		}
 		free(arguments.argz);
 	}
-
+	//remove_option
 	else if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && task == remove_option){
 		const char *prev = NULL;
 		char *item;
@@ -236,6 +285,17 @@ int main(int argc, char **argv)
 		while((item = argz_next(arguments.argz, arguments.argz_len, prev))){
 			value = argz_next(arguments.argz, arguments.argz_len, item);
 			remove_options(item, value);
+			prev = value;
+		}
+		free(arguments.argz);
+	}
+	//ssh_cmd
+	else if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && task == ssh_cmd){
+		const char *prev = NULL;
+		char *item;
+		char *value;
+		while((item = argz_next(arguments.argz, arguments.argz_len, prev))){
+			ssh_command(item, value);
 			prev = value;
 		}
 		free(arguments.argz);
@@ -250,7 +310,6 @@ int main(int argc, char **argv)
 			prev = value;
 		}
 		free(arguments.argz);
-		
 	}
 	else if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && task == mark_inelig){
 		const char *prev = NULL;
@@ -262,7 +321,6 @@ int main(int argc, char **argv)
 			prev = value;
 		}
 		free(arguments.argz);
-
 	}
 	return 0;
 }
