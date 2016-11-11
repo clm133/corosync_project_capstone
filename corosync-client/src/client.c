@@ -322,6 +322,7 @@ int main(int argc, char **argv)
 		char *item;
 		char *value;
 		while((item = argz_next(arguments.argz, arguments.argz_len, prev))){
+			value = argz_next(arguments.argz, arguments.argz_len, item);
 			ssh_command(item, value);
 			prev = value;
 		}
