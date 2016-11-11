@@ -19,7 +19,8 @@ enum client_task {
 	remove_option,
 	ssh_cmd,
 	mark_elig,
-	mark_inelig
+	mark_inelig,
+	epsilon_options
 }task;
 
 /* -s option prints out information regarding the following arguments: "ring", "members", "node"*/
@@ -169,6 +170,25 @@ int mark_eligible ( char *value){
 		return ret;
 }
 
+int epsilon_options(char *item, char *value)
+{
+	int err;
+	uint32_t id = (uint32_t) atoi(value);
+	if (strcmp(item, "add") == 0) {
+		printf("adding epsilon to node %s...\n", id);
+		err = add_epsilon(id);
+		if (err != CS_OK) {
+			printf("something went wrong adding epsilon! Error#%d: %s\n", err, get_error(err));
+			return -1;
+		}
+		printf("success!\n\n");
+	}
+	else {
+		err = -1;
+	}
+	return err;
+}
+
 struct arguments
 {
 	char *argz;
@@ -217,6 +237,12 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 			argz_add(&a->argz, &a->argz_len, arg);
 			break;
 
+		//epsilon options
+		case 'l':
+			task = epsilon_options;
+			argz_add(&a->argz, &a->argz_len, atg);
+			break;
+			
 		case ARGP_KEY_ARG:
 			argz_add(&a->argz, &a->argz_len, arg);
 			break;
@@ -244,12 +270,13 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 int main(int argc, char **argv)
 {
 	struct argp_option options[]={
-		{ "add", 'a', "node", 0, "add a node with address arguement to the cluster"},
+		{"add", 'a', "node", 0, "add a node with address arguement to the cluster"},
 		{"remove", 'r', "node", 0, "remove a node according to nodeid"},
 		{"command", 'c', "start/stop", 0, "starts or stops corosync at specified ip address"},
-		{ "status", 's', "members/quorum/ring/node", 0, "prints status of supplied arguments"},
+		{"status", 's', "members/quorum/ring/node", 0, "prints status of supplied arguments"},
 		{"mark_elig", 'e', "node", 0,"mark node eligible in cluster"},
-		{"mark_inelig", 'i',"node" ,0, "mark node ineligible in cluster"},
+		{"mark_inelig", 'i',"node", 0, "mark node ineligible in cluster"},
+		{"epsilon_options", 'l',"add", 0, "add epsilon to a node"},
 		{0}
 	};
 	struct argp argp = {options, parse_opt, 0, 0, 0, 0, 0};
@@ -318,6 +345,17 @@ int main(int argc, char **argv)
 		while((item = argz_next(arguments.argz, arguments.argz_len, prev))){
 			value = argz_next(arguments.argz, arguments.argz_len, item);
 			mark_ineligible(value);
+			prev = value;
+		}
+		free(arguments.argz);
+	}
+	else if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && task == epsilon_options){
+		const char *prev = NULL;
+		char *item;
+		char *value;
+		while((item = argz_next(arguments.argz, arguments.argz_len, prev))){
+			value = argz_next(arguments.argz, arguments.argz_len, item);
+			epsilon_options(value);
 			prev = value;
 		}
 		free(arguments.argz);
