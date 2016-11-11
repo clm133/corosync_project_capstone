@@ -20,7 +20,7 @@ enum client_task {
 	ssh_cmd,
 	mark_elig,
 	mark_inelig,
-	epsilon_options
+	epsilon_op
 }task;
 
 /* -s option prints out information regarding the following arguments: "ring", "members", "node"*/
@@ -175,7 +175,7 @@ int epsilon_options(char *item, char *value)
 	int err;
 	uint32_t id = (uint32_t) atoi(value);
 	if (strcmp(item, "add") == 0) {
-		printf("adding epsilon to node %s...\n", id);
+		printf("adding epsilon to node %u...\n", id);
 		err = add_epsilon(id);
 		if (err != CS_OK) {
 			printf("something went wrong adding epsilon! Error#%d: %s\n", err, get_error(err));
@@ -239,8 +239,8 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 
 		//epsilon options
 		case 'l':
-			task = epsilon_options;
-			argz_add(&a->argz, &a->argz_len, atg);
+			task = epsilon_op;
+			argz_add(&a->argz, &a->argz_len, arg);
 			break;
 			
 		case ARGP_KEY_ARG:
@@ -349,13 +349,13 @@ int main(int argc, char **argv)
 		}
 		free(arguments.argz);
 	}
-	else if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && task == epsilon_options){
+	else if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0 && task == epsilon_op){
 		const char *prev = NULL;
 		char *item;
 		char *value;
 		while((item = argz_next(arguments.argz, arguments.argz_len, prev))){
 			value = argz_next(arguments.argz, arguments.argz_len, item);
-			epsilon_options(value);
+			epsilon_options(item, value);
 			prev = value;
 		}
 		free(arguments.argz);

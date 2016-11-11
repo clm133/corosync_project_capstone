@@ -457,7 +457,7 @@ int reset_cluster(char *path_to_conf)
 	stop_corosync(addr);
 	copy_conf(addr, path_to_conf);
 	*/
-	return err;
+	return 1;
 }
 
 
@@ -466,10 +466,12 @@ int add_epsilon(uint32_t node_id)
 {
 	cs_error_t err;
 	cmap_handle_t cmap_handle;
-	char id_key[128];
+	cmap_iter_handle_t iter_handle;
+	char key_name[CMAP_KEYNAME_MAXLEN + 1];
+	size_t value_len;
+	cmap_value_types_t type;
 	char votes_key[128];
-	char epsilon_key[128];
-	char ring0_key[128];
+	char *epsilon_key = malloc(sizeof(char) * 128);
 	char id_char[32];
 	char *nodelist = "nodelist.node.";
 	char *votes = ".quorum_votes";
@@ -480,12 +482,12 @@ int add_epsilon(uint32_t node_id)
 	char epsilon_already_set = 0;
 	char epsilon_set_on_this_node = 0;
 	while ((err = cmap_iter_next(cmap_handle, iter_handle, key_name, &value_len, &type)) == CS_OK) {
-		if (strcmp(&key_name[strlen(generic_key)], "nodeid") == 0) {
+		if (strncmp(key_name, "nodeid", 6) == 0) {
 			err = cmap_get_uint32(cmap_handle, key_name, &test_id);
 		}
-		else if (strcmp(&key_name[strlen(generic_key)], "is_epsilon") == 0) {
+		else if (strncmp(key_name, "is_epsilon", 10) == 0) {
 			err = cmap_get_string(cmap_handle, key_name, &epsilon_key);
-			if (strcmp(&epsilon[strlen(generic_key)], "yes") == 0) {
+			if (strncmp(epsilon_key, "yes", 3) == 0) {
 				epsilon_already_set = 1;
 				if (node_id == test_id) {
 					epsilon_set_on_this_node = 1;
@@ -502,27 +504,27 @@ int add_epsilon(uint32_t node_id)
 		}
 		//If epsilon is set on another node, ask to move it to this one
 		else {
-			printf("Failed to set epsilon. Epsilon is already set on another node.\n")
+			printf("Failed to set epsilon. Epsilon is already set on another node.\n");
 			char reply = ' ';
 			while (reply = ' ') {
-				printf("Would you like to move epsilon to this node? [Y/N]: ")
+				printf("Would you like to move epsilon to this node? [Y/N]: ");
 				fflush(stdin);
-				scanf(" %c", &reply)
+				scanf(" %c", &reply);
 				if (reply != 'y' && reply != 'n') reply = ' ';
 			}
 		}
-		return err
+		return err;
 	}
 	
 	sprintf(id_char, "%u", (unsigned int)node_id);
 	//key = nodelist.X.node.quorum_votes
-	strcpy(set_votes_key, nodelist);
-	strcat(set_votes_key, id_char);
-	strcat(set_votes_key, votes);
+	strcpy(votes_key, nodelist);
+	strcat(votes_key, id_char);
+	strcat(votes_key, votes);
 	//key = nodelist.X.node.is_epsilon
-	strcpy(set_epsilon_key, nodelist);
-	strcat(set_epsilon_key, id_char);
-	strcat(set_epsilon_key, epsilon);
+	strcpy(epsilon_key, nodelist);
+	strcat(epsilon_key, id_char);
+	strcat(epsilon_key, epsilon);
 	
 	//initialize cmap handle
 	err = cmap_initialize(&cmap_handle);
@@ -532,11 +534,15 @@ int add_epsilon(uint32_t node_id)
 	}
 	
 	//Set values in cmap
-	cmap_set_uint32(cmap_handle, set_votes_key, 3);
-	cmap_set_string(cmap_handle, set_epsilon_key, "yes");
+	cmap_set_uint32(cmap_handle, votes_key, 3);
+	cmap_set_string(cmap_handle, epsilon_key, "yes");
 	(void)cmap_finalize(cmap_handle);
 	
 	//write to conf file
 	err = write_config("corosync.conf");
 	err = update_all_members();
+
+	free(epsilon_key);
+
+	return err;
 }
