@@ -1,21 +1,20 @@
 ## Compiler
 CC = gcc
 ## Includes
-INC = -Iinc -Iinc/corosync -Iinc/libqb -Iinc/libqb/qb -Iinc/corosync/totem -Iinc/libssh
+INC = -Iinc -Iinc/corosync -Iinc/libqb -Iinc/libqb/qb -Iinc/corosync/totem -Iinc/libssh -Iinc/minunit
 ## Libraries
-STATLIBS = lib/libcmap.a lib/libcorosync_common.a lib/libqb.a lib/libcfg.a lib/libvotequorum.a /usr/lib/x86_64-linux-gnu/libssh.so
-SHAREDLIBS = -L/usr/lib/x86_64-linux-gnu/
+STATLIBS = lib/libcmap.a lib/libcorosync_common.a lib/libqb.a lib/libcfg.a /usr/lib/x86_64-linux-gnu/libssh.so
 GLIBS = -lpthread -ldl
 ## Directories
 IDIR = inc
-SDIR = src
+SDIR = src/main
+TDIR = src/tests
 BDIR = bin
 ODIR = obj
 ## Executables
-## Executables
 OUT = $(BDIR)/corosync-client
 
-_OBJS = client.o cluster_manager.o conf_writer.o modified_cmapctl.o client_errors.o ssh_manager.o modified_cfgtool.o
+_OBJS = client.o cluster_manager.o quorum_manager.o ssh_manager.o sftp_manager.o conf_manager.o client_cmapctl.o cs_errors.o client_errors.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 $(ODIR)/%.o: $(SDIR)/%.c build
@@ -28,8 +27,16 @@ build:
 	@mkdir -p bin
 	@mkdir -p obj
 
+## builds and runs tests, must be called after make 
+tests:
+	$(MAKE) -C $(TDIR)
+	
+testrun:
+	bin/./client-testing
+
 .PHONY: clean
 
+	
 clean:
 	rm -rf bin obj
 	find . -name "*~" -exec rm {} \;
