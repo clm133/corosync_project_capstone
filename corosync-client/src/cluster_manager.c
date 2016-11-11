@@ -470,24 +470,67 @@ int add_epsilon(uint32_t node_id)
 	char key_name[CMAP_KEYNAME_MAXLEN + 1];
 	size_t value_len;
 	cmap_value_types_t type;
+	char *nodelist_key = "nodelist.node";
+	char id_key[128];
 	char votes_key[128];
-	char *epsilon_key = malloc(sizeof(char) * 128);
+	char epsilon_key[128];
 	char id_char[32];
 	char *nodelist = "nodelist.node.";
+	char *id = ".nodeid";
 	char *votes = ".quorum_votes";
 	char *epsilon = ".is_epsilon";
-	
-	//Check if epsilon is already set in a node
+
 	uint32_t test_id = 0;
+	char *epsilon_val = malloc(sizeof(char) * 128);
 	char epsilon_already_set = 0;
 	char epsilon_set_on_this_node = 0;
+	
+	sprintf(id_char, "%u", (unsigned int)node_id);
+	//key = nodelist.X.node.nodeid
+	strcpy(id_key, nodelist);
+	strcat(id_key, id_char);
+	strcat(id_key, id);
+	//key = nodelist.X.node.quorum_votes
+	strcpy(votes_key, nodelist);
+	strcat(votes_key, id_char);
+	strcat(votes_key, votes);
+	//key = nodelist.X.node.is_epsilon
+	strcpy(epsilon_key, nodelist);
+	strcat(epsilon_key, id_char);
+	strcat(epsilon_key, epsilon);
+	
+
+	//initialize cmap handle
+	err = cmap_initialize(&cmap_handle);
+	if(err != CS_OK){
+		printf("Failed to initialize cmap. Error#%d: %s\n", err, get_error(err));
+		return err;
+	}
+
+	//initialize iterator handle
+	err = cmap_iter_init(cmap_handle, nodelist_key, &iter_handle);
+	if(err != CS_OK){
+		printf("Failed to initialize iterator. Error#%d: %s\n", err, get_error(err));
+		(void)cmap_finalize(cmap_handle);
+		return err;
+	}
+	
+	//Check if epsilon is already set in a node
 	while ((err = cmap_iter_next(cmap_handle, iter_handle, key_name, &value_len, &type)) == CS_OK) {
-		if (strncmp(key_name, "nodeid", 6) == 0) {
+		if (strcmp(key_name, id_key) == 0) {
 			err = cmap_get_uint32(cmap_handle, key_name, &test_id);
+			if (err != CS_OK) {
+				printf("Failed to read value cmap. Error#%d: %s\n", err, get_error(err));
+				return err;
+			}
 		}
-		else if (strncmp(key_name, "is_epsilon", 10) == 0) {
-			err = cmap_get_string(cmap_handle, key_name, &epsilon_key);
-			if (strncmp(epsilon_key, "yes", 3) == 0) {
+		else if (strcmp(key_name, epsilon_key) == 0) {
+			err = cmap_get_string(cmap_handle, key_name, &epsilon_val);
+			if (err != CS_OK) {
+				printf("Failed to read value cmap. Error#%d: %s\n", err, get_error(err));
+				return err;
+			}
+			if (strncmp(epsilon_val, "yes", 3) == 0) {
 				epsilon_already_set = 1;
 				if (node_id == test_id) {
 					epsilon_set_on_this_node = 1;
@@ -495,7 +538,10 @@ int add_epsilon(uint32_t node_id)
 			}
 		}		
 	}
-	
+	(void)cmap_iter_finalize(cmap_handle, iter_handle);
+
+	free(epsilon_val);
+
 	//If epsilon is already set, handle appropriately
 	if (epsilon_already_set) {
 		//If epsilon is set on this node, then just return
@@ -516,33 +562,26 @@ int add_epsilon(uint32_t node_id)
 		return err;
 	}
 	
-	sprintf(id_char, "%u", (unsigned int)node_id);
-	//key = nodelist.X.node.quorum_votes
-	strcpy(votes_key, nodelist);
-	strcat(votes_key, id_char);
-	strcat(votes_key, votes);
-	//key = nodelist.X.node.is_epsilon
-	strcpy(epsilon_key, nodelist);
-	strcat(epsilon_key, id_char);
-	strcat(epsilon_key, epsilon);
-	
-	//initialize cmap handle
-	err = cmap_initialize(&cmap_handle);
-	if(err != CS_OK){
-		printf("Failed to initialize cmap. Error#%d: %s\n", err, get_error(err));
-		return -1;
-	}
-	
 	//Set values in cmap
-	cmap_set_uint32(cmap_handle, votes_key, 3);
-	cmap_set_string(cmap_handle, epsilon_key, "yes");
+	err = cmap_set_uint32(cmap_handle, votes_key, 3);
+	if(err != CS_OK){
+		printf("Failed to write votes to node. Error#%d: %s\n", err, get_error(err));
+		(void)cmap_finalize(cmap_handle);
+		return err;
+	}
+
+	err = cmap_set_string(cmap_handle, epsilon_key, "yes");
+	if(err != CS_OK){
+		printf("Failed to write is epsilon to node. Error#%d: %s\n", err, get_error(err));
+		(void)cmap_finalize(cmap_handle);
+		return err;
+	}
+
 	(void)cmap_finalize(cmap_handle);
-	
+
 	//write to conf file
 	err = write_config("corosync.conf");
 	err = update_all_members();
-
-	free(epsilon_key);
 
 	return err;
 }
