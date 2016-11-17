@@ -1,24 +1,30 @@
-/* cluster_manager is responsible for add/remove node functionality,
-*  checking/printing node health, checking/printing cluster membership, 
-*  checking/printing cluster health
-*/
+#ifndef CLUSTER_MANAGER_H
+#define CLUSTER_MANAGER_H
 
-#ifndef CLUSTER_MANAGER_H_DEFINED
-#define CLUSTER_MANAGER_H_DEFINED
-
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <corosync/cfg.h>
-#include <corosync/totem/totem.h>
-#include <corosync/cmap.h>
-#include <corosync/quorum.h>
-#include <corosync/votequorum.h>
 
+#include "client_errors.h"
+#include "cs_errors.h"
+#include "client_cmapctl.h"
+#include "conf_manager.h"
+
+#define MAX_NODES_SUPPORTED 32 //this is totally arbitrary, but I just don't see this project scaling anywhere near this number, much less pass it.
+
+/* mostly a helper functions for cluster_manager, but conf_manager also uses this*/
+int generate_nodelist_key(char *key_buffer, uint32_t id, char *key_suffix);
+/* get_id_from_addr() - sets id parameter to node id associated with provided address parameter addr */ 
+int get_id_from_addr(int nodelist_size, uint32_t *id, char *addr);
+/*add_node() - adds node at address addr */
 int add_node(char *addr);
-int remove_node(uint32_t id);
-int print_ring();
-int print_members();
-int reset_cluster(char *path_to_conf);
+/*remove_node() - removes node at address addr */
+int delete_node(char *addr);
+/*set_node_votes() - sets the quorum-votes of node with id to the votes parameter*/
+int set_node_votes(uint32_t id, uint32_t votes);
+/* move_epsilon() - moves epsilon from node ex_id to node e_id */
+int move_epsilon(uint32_t e_id, uint32_t ex_id);
+/* set_epsilon() - sets epsilon to node with node id == e_id */
+int set_epsilon(uint32_t e_id);
+/* remove_epsilon() - removes epsilon from node with id == e_id */
+int remove_epsilon(uint32_t e_id);
 
 #endif /* CLUSTER_MANAGER_H */
