@@ -20,6 +20,10 @@ int add_node(char *addr);
 int delete_node(char *addr);
 /*set_node_votes() - sets the quorum-votes of node with id to the votes parameter*/
 int set_node_votes(uint32_t id, uint32_t votes);
+/*mark_eligible() - sets the node id == e_id eligible by setting quorum votes to 2*/
+int mark_eligible(uint32_t *e_id);
+/*mark_ineligible() - sets the node id == e_id ineligible by setting quorum votes to 0*/
+int mark_ineligible(uint32_t *e_id);
 /* move_epsilon() - moves epsilon from node ex_id to node e_id */
 int move_epsilon(uint32_t e_id, uint32_t ex_id);
 /* set_epsilon() - sets epsilon to node with node id == e_id. moving is 1 if called from move func*/

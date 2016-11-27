@@ -224,6 +224,44 @@ int delete_node(char *addr)
 	return CS_OK;
 }
 
+int mark_eligible(uint32_t *e_id) {
+	int err;
+	int votes = 2;
+	char key_buffer[CMAP_KEYNAME_MAXLEN  + 1];
+	char *value_epsilon;
+	
+	//Get is_epsilon from node
+	err = generate_nodelist_key(key_buffer, e_id, "is_epsilon");
+	err = client_get_cmap_string_value(key_buffer, &value_epsilon);
+	if (err != CS_OK){
+		return err;
+	}
+	
+	//If is_epsilon == "yes", then set votes to 3
+	if (strcmp(value_epsilon, "yes") == 0) {
+		votes = 3;
+	}
+	
+	//Set votes
+	err = set_node_votes(e_id, votes);
+	if (err != CS_OK){
+		return err;
+	}
+	
+	return CS_OK;
+}
+
+int mark_ineligible(uint32_t *e_id) {
+	int err;
+	
+	err = set_node_votes(e_id, 0);
+	if (err != CS_OK){
+		return err;
+	}
+	
+	return CS_OK;
+}
+
 int move_epsilon(uint32_t e_id, uint32_t ex_id)
 {
 	int err;
@@ -298,15 +336,15 @@ int set_epsilon(uint32_t e_id, int moving)
 	//Clear current key_buffer
 	for (i = 0; i < CMAP_KEYNAME_MAXLEN + 1; i++) key_buffer[i] = '\0';
 	
-	//Check if node is eligable
+	//Check if node is eligible
 	err = generate_nodelist_key(key_buffer, e_id, "quorum_votes");
 	err = client_get_cmap_value(key_buffer, &value_votes, CMAP_VALUETYPE_UINT32);
 	if (err != CS_OK){
 		return err;
 	}
-	//If quorum votes doesn't equal 0, then assume eligable and set votes to 3
+	//If quorum votes doesn't equal 0, then assume eligible and set votes to 3
 	if (value_votes != 0) {
-		//Set votes to 3 if eligable
+		//Set votes to 3 if eligible
 		err = set_node_votes(e_id, 3);
 		if (err != CS_OK){
 			return err;
@@ -358,15 +396,15 @@ int remove_epsilon(uint32_t e_id) {
 	//Clear current key_buffer
 	for (i = 0; i < CMAP_KEYNAME_MAXLEN + 1; i++) key_buffer[i] = '\0';
 	
-	//Check if node is eligable
+	//Check if node is eligible
 	err = generate_nodelist_key(key_buffer, e_id, "quorum_votes");
 	err = client_get_cmap_value(key_buffer, &value_votes, CMAP_VALUETYPE_UINT32);
 	if (err != CS_OK){
 		return err;
 	}
-	//If quorum votes doesn't equal 0, then assume eligable and set votes to 2
+	//If quorum votes doesn't equal 0, then assume eligible and set votes to 2
 	if (value_votes != 0) {
-		//Set votes to 2 if eligable
+		//Set votes to 2 if eligible
 		err = set_node_votes(e_id, 2);
 		if (err != CS_OK){
 			return err;
