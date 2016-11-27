@@ -22,6 +22,7 @@ enum client_task{
 	remove_option,
 	print_option,
 	quorum_option,
+	eligiblity_option,
 	ssh_cmd
 } task;
 
@@ -165,24 +166,8 @@ void client_change_epsilon(char *mode, uint32_t *id1, uint32_t *id2)
 	
 	src_file = "corosync_client.conf";
 	dest_file = "/etc/corosync/corosync.conf";
-	// mark eligible
-	if(strcmp(mode, "mark_eligible") == 0){
-		err = mark_eligible(*id1);
-		if(err != CS_OK){
-			printf("there was an error marking node eligible - error: %s\n", get_error(err));
-			return;
-		}
-	}
-	// mark ineligible
-	else if(strcmp(mode, "mark_ineligible") == 0) {
-		err = mark_ineligible(*id1);
-		if(err != CS_OK){
-			printf("there was an error marking node ineligible - error: %s\n", get_error(err));
-			return;
-		}
-	}
 	// set epsilon
-	else if(strcmp(mode, "set_epsilon") == 0){
+	if(strcmp(mode, "set_epsilon") == 0){
 		err = set_epsilon(*id1, 0);
 		if(err != CS_OK){
 			printf("there was an error setting epsilon - error: %s\n", get_error(err));
@@ -309,6 +294,70 @@ void client_change_votes(char *addr, uint32_t votes)
 	printf("node at %s had their quorum_votes changed to %u\n", addr, votes);
 }
 
+void client_change_eligibility(char *mode, uint32_t *id1) 
+{
+	int err;
+	int total;
+	char **nodelist;
+	char *src_file;
+	char *dest_file;
+	
+	src_file = "corosync_client.conf";
+	dest_file = "/etc/corosync/corosync.conf";
+	// mark eligible
+	if(strcmp(mode, "mark_eligible") == 0){
+		err = mark_eligible(*id1);
+		if(err != CS_OK){
+			printf("there was an error marking node eligible - error: %s\n", get_error(err));
+			return;
+		}
+	}
+	// mark ineligible
+	else if(strcmp(mode, "mark_ineligible") == 0) {
+		err = mark_ineligible(*id1);
+		if(err != CS_OK){
+			printf("there was an error marking node ineligible - error: %s\n", get_error(err));
+			return;
+		}
+	}
+	//generate conf file
+	err = write_conf(src_file);
+	if(err != CS_OK){
+		printf("There were problems generating conf - error: %s\n", get_error(err));
+		return;
+	}
+	//sftp conf file to all nodes
+	printf("conf successfuly generated... attempting to update all cluster nodes...\n");
+	err = nodelist_get_total(&total);
+	if(err != CS_OK){
+		printf("There were problems updating cluster nodes - error: %s\n", get_error(err));
+		return;
+	}
+	//before updating all nodes, we need to get a list of those remaining
+	nodelist = malloc(sizeof(char *) * total);
+	err = nodelist_get_addr_array(nodelist);
+	if(err != CS_OK){
+		printf("There were problems updating cluster nodes - error: %s\n", get_error(err));
+		free(nodelist);
+		return;
+	}
+	//now we can update all!
+	err = update_all(nodelist, total, src_file, dest_file);
+	//free up our malloc
+	while(total > 0){
+		free(nodelist[total - 1]);
+		total--;
+	}
+	free(nodelist);
+	if(err != CS_OK){
+		printf("There were problems updating cluster nodes - error: %s\n", get_error(err));
+		return;
+	}
+	printf("all nodes in cluster successfully updated\n");
+	//success
+	printf("eligibity changed successfully\n");
+}
+
 void client_ssh_command(char *cmd, char *addr)
 {
 	int err;
@@ -371,20 +420,8 @@ void client_quorum_option(struct arguments *arguments)
 	q_target = argz_next(arguments->argz, arguments->argz_len, prev);
 	prev = q_target;
 	while(addr = argz_next(arguments->argz, arguments->argz_len, prev)){
-		// mark elegible
-		if(strcmp(q_target, "mark_eligible") == 0){
-			id1 = (uint32_t)atoi(addr);
-			client_change_epsilon(q_target, &id1, NULL);
-			break;
-		}
-		// mark elegible
-		else if(strcmp(q_target, "mark_ineligible") == 0){
-			id1 = (uint32_t)atoi(addr);
-			client_change_epsilon(q_target, &id1, NULL);
-			break;
-		}
 		// set epsilon
-		else if(strcmp(q_target, "set_epsilon") == 0){
+		if(strcmp(q_target, "set_epsilon") == 0){
 			id1 = (uint32_t)atoi(addr);
 			client_change_epsilon(q_target, &id1, NULL);
 			break;
@@ -473,6 +510,42 @@ void client_remove_option(struct arguments *arguments)
 	
 }
 
+void client_eligibity_option(struct arguments *arguments)
+{
+	int err;
+	char *e_target;
+	const char *prev;
+	char *addr;
+	uint32_t id1;
+	struct timespec half_sec;
+
+	half_sec.tv_nsec = 500000000;
+	prev = NULL;
+	e_target = argz_next(arguments->argz, arguments->argz_len, prev);
+	prev = e_target;
+	while(addr = argz_next(arguments->argz, arguments->argz_len, prev)){
+		// mark eligible
+		if(strcmp(e_target, "mark_eligible") == 0){
+			id1 = (uint32_t)atoi(addr);
+			client_change_epsilon(e_target, &id1);
+			break;
+		}
+		// mark ineligible
+		else if(strcmp(e_target, "mark_ineligible") == 0){
+			id1 = (uint32_t)atoi(addr);
+			client_change_epsilon(e_target, &id1);
+			break;
+		}
+		// unknown e_target 
+		else{
+			break;
+		}
+		
+		prev = addr;
+		nanosleep(&half_sec, NULL); //updating conf files and restarting corosync takes some time, so we sleep between executions
+	}
+}
+
 void client_ssh_option(struct arguments *arguments)
 {
 	int err;
@@ -557,11 +630,12 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 int main(int argc, char **argv)
 {
 	struct argp_option options[]={
-		{ "add", 'a', "<cluster_option> <node-ip-addr>", 0, "adds a cluster option (usually a node) to the cluster."},
+		{"add", 'a', "<cluster_option> <node-ip-addr>", 0, "adds a cluster option (usually a node) to the cluster."},
 		{"remove", 'r', "<cluster_option> <node-ip-addr>", 0, "removes a cluster option (usually a node) from the cluster."},
 		{"command", 'c', "<ssh-command> <node-ip-addr>", 0, "uses ssh to remotely execute command at target node in the cluster."},
 		{"print", 'p', "<corosync-item>", 0, "prints the status of corosync target item"},
 		{"quorum", 'q', "<quorum-setting>", 0, "changes a quorum setting"},
+		{"eligible", 'e', "<eligiblity-setting>", 0, "changes a eligibity setting"},
 		{0}
 	};
 	struct argp argp = {options, parse_opt, 0, 0, 0, 0, 0};
@@ -589,7 +663,10 @@ int main(int argc, char **argv)
 			case quorum_option:
 				client_quorum_option(&arguments);
 				break;
-				
+			
+			case eligiblity_option:
+				client_eligibity_option(&arguments);
+				break;
 		}
 		free(arguments.argz);
 	}
