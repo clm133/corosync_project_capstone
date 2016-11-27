@@ -175,7 +175,7 @@ void client_change_epsilon(char *mode, uint32_t *id1, uint32_t *id2)
 	}
 	// remove_epsilon
 	else if(strcmp(mode, "remove_epsilon") == 0){
-		err = remove_epsilon(*id1);
+		err = remove_epsilon();
 		if(err != CS_OK){
 			printf("there was an error removing epsilon - error: %s\n", get_error(err));
 			return;

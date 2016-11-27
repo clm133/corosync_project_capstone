@@ -24,7 +24,9 @@ int set_node_votes(uint32_t id, uint32_t votes);
 int move_epsilon(uint32_t e_id, uint32_t ex_id);
 /* set_epsilon() - sets epsilon to node with node id == e_id */
 int set_epsilon(uint32_t e_id);
-/* remove_epsilon() - removes epsilon from node with id == e_id */
-int remove_epsilon(uint32_t e_id);
+/* remove_epsilon() - removes epsilon from node where is_epsilon == "yes" */
+int remove_epsilon();
+/* is_espsilon_set_on_any_node() - get if epsilon is set on a node and if it is, return the node id as well*/
+int is_epsilon_set_on_any_node(int *is_set, uint32_t *e_id);
 
 #endif /* CLUSTER_MANAGER_H */
