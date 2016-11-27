@@ -400,8 +400,56 @@ int remove_epsilon() {
 	return CS_OK;
 }*/
 
-int is_epsilon_set_on_any_node(int *is_set, uint32_t *r_id) {
+int is_epsilon_set_on_any_node(int *is_set, uint32_t *e_id) {
+	cs_error_t err;
+	cmap_handle_t cmap_handle;
+	cmap_iter_handle_t iter_handle;
+	char key_name[CMAP_KEYNAME_MAXLEN + 1];
+	size_t value_len;
+	cmap_value_types_t type;
+
+	uint32_t test_id = 0;
+	char *epsilon_val = malloc(sizeof(char) * 128);
+	
+	//initialize cmap handle
+	err = cmap_initialize(&cmap_handle);
+	if(err != CS_OK){
+		printf("Failed to initialize cmap. Error#%d: %s\n", err, get_error(err));
+		return err;
+	}
+
+	//initialize iterator handle
+	err = cmap_iter_init(cmap_handle, nodelist_key, &iter_handle);
+	if(err != CS_OK){
+		printf("Failed to initialize iterator. Error#%d: %s\n", err, get_error(err));
+		(void)cmap_finalize(cmap_handle);
+		return err;
+	}
+	
+	//Check if epsilon is already set in a node
+	while ((err = cmap_iter_next(cmap_handle, iter_handle, key_name, &value_len, &type)) == CS_OK) {
+		if (strcmp(key_name, "nodeid") == 0) {
+			err = cmap_get_uint32(cmap_handle, key_name, &test_id);
+			if (err != CS_OK) {
+				printf("Failed to read value cmap. Error#%d: %s\n", err, get_error(err));
+				return err;
+			}
+		}
+		else if (strcmp(key_name, "is_epsilon") == 0) {
+			err = cmap_get_string(cmap_handle, key_name, &epsilon_val);
+			if (err != CS_OK) {
+				printf("Failed to read value cmap. Error#%d: %s\n", err, get_error(err));
+				return err;
+			}
+			if (strncmp(epsilon_val, "yes", 3) == 0) {
+				*is_set = 1;
+				*e_id = test_id;
+			}
+		}		
+	}
+	(void)cmap_iter_finalize(cmap_handle, iter_handle);
+
+	free(epsilon_val);
 	
 	return CS_OK;
 }
-
