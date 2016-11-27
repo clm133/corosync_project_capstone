@@ -232,7 +232,7 @@ int move_epsilon(uint32_t e_id, uint32_t ex_id)
 	if(err != CS_OK){
 		return err;
 	}
-	err = set_epsilon(e_id);
+	err = set_epsilon(e_id, 1);
 	if(err != CS_OK){
 		return err;
 	}
@@ -253,7 +253,7 @@ int set_node_votes(uint32_t id, uint32_t votes)
 	return CS_OK;
 }
 
-int set_epsilon(uint32_t e_id)
+int set_epsilon(uint32_t e_id, int moving)
 {
 	int i = 0;
 	int err;
@@ -264,32 +264,34 @@ int set_epsilon(uint32_t e_id)
 	char *str = "yes";
 	char *value_epsilon;
 	
-	//Get current value of is_epsilon
 	err = generate_nodelist_key(key_buffer, e_id, "is_epsilon");
-	err = client_get_cmap_string_value(key_buffer, &value_epsilon);
-	if(err != CS_OK){
-		return err;
-	}
-	//If already set to "yes", then return error
-	if(strcmp(value_epsilon, "yes") == 0) {
-		printf("Epsilon is already set at node id %u - ", e_id);
-		return CS_ERR_BAD_OPERATION;
-	}
-	
-	//Check if epsilon is set on any other node
-	err = is_epsilon_set_on_any_node(&is_set, &r_id);
-	if(err != CS_OK){
-		return err;
-	}
-	//If is set on another node, then return error and recommend to use move instead
-	if (is_set) {
-		printf("Epsilon is already set on another node. Use move_epsilon instead - ");
-		return CS_ERR_BAD_OPERATION;
+	if (moving == 0) {
+		//Get current value of is_epsilon
+		err = client_get_cmap_string_value(key_buffer, &value_epsilon);
+		if (err != CS_OK){
+			return err;
+		}
+		//If already set to "yes", then return error
+		if (strcmp(value_epsilon, "yes") == 0) {
+			printf("Epsilon is already set at node id %u - ", e_id);
+			return CS_ERR_BAD_OPERATION;
+		}
+		
+		//Check if epsilon is set on any other node
+		err = is_epsilon_set_on_any_node(&is_set, &r_id);
+		if (err != CS_OK){
+			return err;
+		}
+		//If is set on another node, then return error and recommend to use move instead
+		if (is_set == 1) {
+			printf("Epsilon is already set on another node. Use move_epsilon instead - ");
+			return CS_ERR_BAD_OPERATION;
+		}
 	}
 	
 	//Set is_epsilon to "yes"
 	err = client_set_cmap_value(key_buffer, str, CMAP_VALUETYPE_STRING);
-	if(err != CS_OK){
+	if (err != CS_OK){
 		return err;
 	}
 	
@@ -299,157 +301,121 @@ int set_epsilon(uint32_t e_id)
 	//Check if node is eligable
 	err = generate_nodelist_key(key_buffer, e_id, "quorum_votes");
 	err = client_get_cmap_value(key_buffer, &value_votes, CMAP_VALUETYPE_UINT32);
-	if(err != CS_OK){
-		return err;
-	}
-	//If quorum votes doesn't equal 0, then assume eligable and set votes to 2
-	if (value_votes != 0) {
-		//Set votes to 2 if eligable
-		err = set_node_votes(e_id, 2);
-		if(err != CS_OK){
-			return err;
-		}
-	}
-	return CS_OK;
-}
-
-int remove_epsilon() {
-	int i = 0;
-	int err;
-	int is_set;
-	int value_votes;
-	uint32_t e_id;
-	char key_buffer[CMAP_KEYNAME_MAXLEN + 1];
-	char *str = "no";
-	char *value_epsilon;
-	
-	//Check if epsilon is set on any other node
-	err = is_epsilon_set_on_any_node(&is_set, &e_id);
-	if(err != CS_OK){
-		return err;
-	}
-	//If is not set on another node, then return error since nothing to remove
-	if (!is_set) {
-		printf("Epsilon is already set on another node. Use move_epsilon instead - ");
-		return CS_ERR_BAD_OPERATION;
-	}
-	
-	//Get current value
-	err = generate_nodelist_key(key_buffer, e_id, "is_epsilon");
-	err = client_get_cmap_string_value(key_buffer, &value_epsilon);
-	if(err != CS_OK){
-		return err;
-	}
-	//If already set to "no", then return error
-	if(strcmp(value_epsilon, "no") == 0) {
-		printf("Epsilon is not set at node id %u - ", e_id);
-		return CS_ERR_BAD_OPERATION;
-	}
-	
-	//Set is_epsilon to "no"
-	err = client_set_cmap_value(key_buffer, str, CMAP_VALUETYPE_STRING);
-	if(err != CS_OK){
-		return err;
-	}
-	
-	//Clear current key_buffer
-	for (i = 0; i < CMAP_KEYNAME_MAXLEN + 1; i++) key_buffer[i] = '\0';
-	
-	//Check if node is eligable
-	err = generate_nodelist_key(key_buffer, e_id, "quorum_votes");
-	err = client_get_cmap_value(key_buffer, &value_votes, CMAP_VALUETYPE_UINT32);
-	if(err != CS_OK){
+	if (err != CS_OK){
 		return err;
 	}
 	//If quorum votes doesn't equal 0, then assume eligable and set votes to 3
 	if (value_votes != 0) {
 		//Set votes to 3 if eligable
 		err = set_node_votes(e_id, 3);
-		if(err != CS_OK){
+		if (err != CS_OK){
 			return err;
 		}
 	}
 	return CS_OK;
 }
 
-
-/*int remove_epsilon(uint32_t e_id)
-{
+int remove_epsilon(uint32_t e_id) {
+	int i = 0;
 	int err;
+	int is_set;
+	int value_votes;
+	uint32_t r_id;
 	char key_buffer[CMAP_KEYNAME_MAXLEN + 1];
 	char *str = "no";
-	char *value;
+	char *value_epsilon;
 	
-	err = generate_nodelist_key(key_buffer, e_id, "is_epsilon");
+	//Check if epsilon is set on any other node
+	err = is_epsilon_set_on_any_node(&is_set, &r_id);
+
+	if (err != CS_OK){
+		return err;
+	}
+	//If is not set on another node, then return error since nothing to remove
+	if (is_set == 0) {
+		printf("Epsilon is not set on any node. No epsilon to remove - ");
+		return CS_ERR_BAD_OPERATION;
+	}
 	
 	//Get current value
-	err = client_get_cmap_string_value(key_buffer, &value);
-	if(err != CS_OK){
+	err = generate_nodelist_key(key_buffer, e_id, "is_epsilon");
+	err = client_get_cmap_string_value(key_buffer, &value_epsilon);
+	if (err != CS_OK){
 		return err;
 	}
 	//If already set to "no", then return error
-	if(strcmp(value, "no") == 0) {
+	if (strcmp(value_epsilon, "no") == 0) {
 		printf("Epsilon is not set at node id %u - ", e_id);
 		return CS_ERR_BAD_OPERATION;
 	}
 	
+	//Set is_epsilon to "no"
 	err = client_set_cmap_value(key_buffer, str, CMAP_VALUETYPE_STRING);
-	if(err != CS_OK){
+	if (err != CS_OK){
 		return err;
+	}
+	
+	//Clear current key_buffer
+	for (i = 0; i < CMAP_KEYNAME_MAXLEN + 1; i++) key_buffer[i] = '\0';
+	
+	//Check if node is eligable
+	err = generate_nodelist_key(key_buffer, e_id, "quorum_votes");
+	err = client_get_cmap_value(key_buffer, &value_votes, CMAP_VALUETYPE_UINT32);
+	if (err != CS_OK){
+		return err;
+	}
+	//If quorum votes doesn't equal 0, then assume eligable and set votes to 2
+	if (value_votes != 0) {
+		//Set votes to 2 if eligable
+		err = set_node_votes(e_id, 2);
+		if (err != CS_OK){
+			return err;
+		}
 	}
 	return CS_OK;
-}*/
+}
 
 int is_epsilon_set_on_any_node(int *is_set, uint32_t *e_id) {
-	cs_error_t err;
-	cmap_handle_t cmap_handle;
-	cmap_iter_handle_t iter_handle;
-	char key_name[CMAP_KEYNAME_MAXLEN + 1];
-	size_t value_len;
-	cmap_value_types_t type;
+	int i = 0;
+	int err;
+	int total = 0;
+	char key_buffer[CMAP_KEYNAME_MAXLEN + 1];
+	uint32_t **nodelist;
 
-	uint32_t test_id = 0;
-	char *epsilon_val = malloc(sizeof(char) * 128);
-	
-	//initialize cmap handle
-	err = cmap_initialize(&cmap_handle);
-	if(err != CS_OK){
-		printf("Failed to initialize cmap. Error#%d: %s\n", err, get_error(err));
+	err = nodelist_get_total(&total);
+	if (err != CS_OK) {
+		printf("error obtaining node total\n");
 		return err;
 	}
 
-	//initialize iterator handle
-	err = cmap_iter_init(cmap_handle, nodelist_key, &iter_handle);
-	if(err != CS_OK){
-		printf("Failed to initialize iterator. Error#%d: %s\n", err, get_error(err));
-		(void)cmap_finalize(cmap_handle);
+	nodelist = malloc(sizeof(uint32_t *) * total);
+	err = nodelist_get_id_array(nodelist);
+	if (err != CS_OK) {
+		free(nodelist);
+		printf("error creating node list\n");
 		return err;
 	}
-	
-	//Check if epsilon is already set in a node
-	while ((err = cmap_iter_next(cmap_handle, iter_handle, key_name, &value_len, &type)) == CS_OK) {
-		if (strcmp(key_name, "nodeid") == 0) {
-			err = cmap_get_uint32(cmap_handle, key_name, &test_id);
-			if (err != CS_OK) {
-				printf("Failed to read value cmap. Error#%d: %s\n", err, get_error(err));
-				return err;
-			}
+
+	for (i = 0; i < total; i++) {
+		char id_char[32];
+		char *value;
+
+		int *node_id = *(nodelist + i);
+
+		err = generate_nodelist_key(key_buffer, *node_id, "is_epsilon");
+		err = client_get_cmap_string_value(key_buffer, &value);
+		if (err != CS_OK) {
+			free(nodelist);
+			return err;
 		}
-		else if (strcmp(key_name, "is_epsilon") == 0) {
-			err = cmap_get_string(cmap_handle, key_name, &epsilon_val);
-			if (err != CS_OK) {
-				printf("Failed to read value cmap. Error#%d: %s\n", err, get_error(err));
-				return err;
-			}
-			if (strncmp(epsilon_val, "yes", 3) == 0) {
-				*is_set = 1;
-				*e_id = test_id;
-			}
-		}		
-	}
-	(void)cmap_iter_finalize(cmap_handle, iter_handle);
 
-	free(epsilon_val);
-	
+		if (strcmp(value, "yes") == 0) {
+			*is_set = 1;
+			*e_id = *node_id;
+			break;
+		}
+	}
+
+	free(nodelist);
 	return CS_OK;
 }

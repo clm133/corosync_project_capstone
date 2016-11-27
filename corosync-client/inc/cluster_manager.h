@@ -22,10 +22,10 @@ int delete_node(char *addr);
 int set_node_votes(uint32_t id, uint32_t votes);
 /* move_epsilon() - moves epsilon from node ex_id to node e_id */
 int move_epsilon(uint32_t e_id, uint32_t ex_id);
-/* set_epsilon() - sets epsilon to node with node id == e_id */
-int set_epsilon(uint32_t e_id);
+/* set_epsilon() - sets epsilon to node with node id == e_id. moving is 1 if called from move func*/
+int set_epsilon(uint32_t e_id, int moving);
 /* remove_epsilon() - removes epsilon from node where is_epsilon == "yes" */
-int remove_epsilon();
+int remove_epsilon(uint32_t e_id);
 /* is_espsilon_set_on_any_node() - get if epsilon is set on a node and if it is, return the node id as well*/
 int is_epsilon_set_on_any_node(int *is_set, uint32_t *e_id);
 

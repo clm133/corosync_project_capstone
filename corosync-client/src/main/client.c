@@ -167,7 +167,7 @@ void client_change_epsilon(char *mode, uint32_t *id1, uint32_t *id2)
 	dest_file = "/etc/corosync/corosync.conf";
 	// set epsilon
 	if(strcmp(mode, "set_epsilon") == 0){
-		err = set_epsilon(*id1);
+		err = set_epsilon(*id1, 0);
 		if(err != CS_OK){
 			printf("there was an error setting epsilon - error: %s\n", get_error(err));
 			return;
@@ -175,7 +175,7 @@ void client_change_epsilon(char *mode, uint32_t *id1, uint32_t *id2)
 	}
 	// remove_epsilon
 	else if(strcmp(mode, "remove_epsilon") == 0){
-		err = remove_epsilon();
+		err = remove_epsilon(*id1);
 		if(err != CS_OK){
 			printf("there was an error removing epsilon - error: %s\n", get_error(err));
 			return;
