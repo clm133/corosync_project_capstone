@@ -22,7 +22,7 @@ enum client_task{
 	remove_option,
 	print_option,
 	quorum_option,
-	eligiblity_option,
+	eligibility_option,
 	ssh_cmd
 } task;
 
@@ -518,7 +518,7 @@ void client_eligibity_option(struct arguments *arguments)
 	char *addr;
 	uint32_t id1;
 	struct timespec half_sec;
-
+	
 	half_sec.tv_nsec = 500000000;
 	prev = NULL;
 	e_target = argz_next(arguments->argz, arguments->argz_len, prev);
@@ -527,16 +527,16 @@ void client_eligibity_option(struct arguments *arguments)
 		// mark eligible
 		if(strcmp(e_target, "mark_eligible") == 0){
 			id1 = (uint32_t)atoi(addr);
-			client_change_epsilon(e_target, &id1);
+			client_change_eligibility(e_target, &id1);
 			break;
 		}
 		// mark ineligible
 		else if(strcmp(e_target, "mark_ineligible") == 0){
 			id1 = (uint32_t)atoi(addr);
-			client_change_epsilon(e_target, &id1);
+			client_change_eligibility(e_target, &id1);
 			break;
 		}
-		// unknown e_target 
+		// unknown e_target
 		else{
 			break;
 		}
@@ -553,7 +553,6 @@ void client_ssh_option(struct arguments *arguments)
 	const char *prev;
 	char *addr;
 	
-
 	prev = NULL;
 	cmd = argz_next(arguments->argz, arguments->argz_len, prev);
 	prev = cmd;
@@ -568,10 +567,10 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 {
 	size_t count;
 	struct arguments *a;
-
+	
 	a = state->input;
 	switch(key){
-			
+	
 	//add_option
 	case 'a':
 		task = add_option;
@@ -589,7 +588,7 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		task = ssh_cmd;
 		argz_add(&a->argz, &a->argz_len, arg);
 		break;
-	
+			
 	//print_option
 	case 'p':
 		task = print_option;
@@ -602,17 +601,23 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		argz_add(&a->argz, &a->argz_len, arg);
 		break;
 			
+	//eligibility_option
+	case 'e':
+		task = eligibility_option;
+		argz_add(&a->argz, &a->argz_len, arg);
+		break;
+			
 	//argp stuff
 	case ARGP_KEY_ARG:
 		argz_add(&a->argz, &a->argz_len, arg);
 		break;
-
+			
 	case ARGP_KEY_INIT:
 		a->argz = 0;
 		a->argz_len = 0;
 		break;
 			
-	//Argument limit (currently 5)	
+	//Argument limit (currently 5)
 	case ARGP_KEY_END:
 		count = argz_count(a->argz, a->argz_len);
 		if(count > 5){
@@ -622,7 +627,6 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 			argp_failure(state, 1, 0, "too few arguments");
 		}
 		break;
-			
 	}
 	return 0;
 }
@@ -635,7 +639,7 @@ int main(int argc, char **argv)
 		{"command", 'c', "<ssh-command> <node-ip-addr>", 0, "uses ssh to remotely execute command at target node in the cluster."},
 		{"print", 'p', "<corosync-item>", 0, "prints the status of corosync target item"},
 		{"quorum", 'q', "<quorum-setting>", 0, "changes a quorum setting"},
-		{"eligible", 'e', "<eligiblity-setting>", 0, "changes a eligibity setting"},
+		{"eligibility", 'e', "<eligiblity-setting>", 0, "changes a eligibity setting"},
 		{0}
 	};
 	struct argp argp = {options, parse_opt, 0, 0, 0, 0, 0};
@@ -643,15 +647,15 @@ int main(int argc, char **argv)
 	printf("\n");
 	if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0){
 		switch(task){
-				
+			
 			case add_option:
 				client_add_option(&arguments);
 				break;
-				
+			
 			case remove_option:
 				client_remove_option(&arguments);
 				break;
-				
+			
 			case ssh_cmd:
 				client_ssh_option(&arguments);
 				break;
@@ -659,12 +663,12 @@ int main(int argc, char **argv)
 			case print_option:
 				client_print_option(&arguments);
 				break;
-				
+			
 			case quorum_option:
 				client_quorum_option(&arguments);
 				break;
 			
-			case eligiblity_option:
+			case eligibility_option:
 				client_eligibity_option(&arguments);
 				break;
 		}
