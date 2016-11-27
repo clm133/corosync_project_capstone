@@ -167,7 +167,7 @@ void client_change_epsilon(char *mode, uint32_t *id1, uint32_t *id2)
 	dest_file = "/etc/corosync/corosync.conf";
 	// mark eligible
 	if(strcmp(mode, "mark_eligible") == 0){
-		err = mark_eligible(*id1, 0);
+		err = mark_eligible(*id1);
 		if(err != CS_OK){
 			printf("there was an error marking node eligible - error: %s\n", get_error(err));
 			return;
@@ -175,7 +175,7 @@ void client_change_epsilon(char *mode, uint32_t *id1, uint32_t *id2)
 	}
 	// mark ineligible
 	else if(strcmp(mode, "mark_ineligible") == 0) {
-		err = set_ineligible(*id1, 0);
+		err = mark_ineligible(*id1);
 		if(err != CS_OK){
 			printf("there was an error marking node ineligible - error: %s\n", get_error(err));
 			return;
@@ -372,13 +372,13 @@ void client_quorum_option(struct arguments *arguments)
 	prev = q_target;
 	while(addr = argz_next(arguments->argz, arguments->argz_len, prev)){
 		// mark elegible
-		if(strcmp(q_target, "mark_elegible") == 0){
+		if(strcmp(q_target, "mark_eligible") == 0){
 			id1 = (uint32_t)atoi(addr);
 			client_change_epsilon(q_target, &id1, NULL);
 			break;
 		}
 		// mark elegible
-		else if(strcmp(q_target, "mark_inelegible") == 0){
+		else if(strcmp(q_target, "mark_ineligible") == 0){
 			id1 = (uint32_t)atoi(addr);
 			client_change_epsilon(q_target, &id1, NULL);
 			break;

@@ -224,7 +224,7 @@ int delete_node(char *addr)
 	return CS_OK;
 }
 
-int mark_eligible(uint32_t *e_id) {
+int mark_eligible(uint32_t e_id) {
 	int err;
 	int votes = 2;
 	char key_buffer[CMAP_KEYNAME_MAXLEN  + 1];
@@ -251,7 +251,7 @@ int mark_eligible(uint32_t *e_id) {
 	return CS_OK;
 }
 
-int mark_ineligible(uint32_t *e_id) {
+int mark_ineligible(uint32_t e_id) {
 	int err;
 	
 	err = set_node_votes(e_id, 0);
