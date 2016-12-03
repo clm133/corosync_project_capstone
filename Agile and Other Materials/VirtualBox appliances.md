@@ -15,3 +15,6 @@
 * Each VM is networked to internet via NAT eth0. Each VM is networked to each other via internal network eth1.
 * Each VM has gcc, make, sshlib, openssh-client, openssh-server, and --of course-- corosync installed.
 * root ssh keys have been generated and have been shared among all the nodes.
+
+## Appliance 12.3
+https://drive.google.com/file/d/0B4lfLgChvxq8QndnQ202SlBNUVk/view?usp=sharing
