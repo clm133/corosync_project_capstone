@@ -10,6 +10,7 @@
 #include <time.h>
 
 #include "client_errors.h"
+#include "time_manager.h"
 
 //helper function which frees channel for ssh functions
 void free_channel(ssh_channel channel);
@@ -20,9 +21,9 @@ int start_corosync(char *addr);
 //sends the command 'corosync-cfgtool -H' to the address provided, returns 0 on success or client_error_t on failrue
 int stop_corosync(char *addr);
 //same as the normal start command, but records the time right before command is sent
-int start_corosync_timed(char *addr, time_t *cmd_time);
+int start_corosync_timed(char *addr, long *cmd_start);
 //same as the normal stop command, but records the time right before command is sent
-int stop_corosync_timed(char *addr, time_t *cmd_time);
+int stop_corosync_timed(char *addr, long *cmd_start);
 // just a call to stop_corosync() and then start_corosync()
 int restart_corosync(char *addr);
 

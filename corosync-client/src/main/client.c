@@ -35,12 +35,63 @@ enum client_task{
 const char *argp_program_bug_address = "charliemietzner@gmail.com";
 const char *argp_program_version = "version 12.1.16";
 
+void client_ssh_command(char *cmd, char *addr, char *src_file_name)
+{
+	int err;
+	char src_file[128];
+	char *dest_file;
+	long cmd_start;
+	Notify_Context nc;
+		
+	//start corosync
+	if(strcmp(cmd, "start") == 0){
+		nc.change = CLUSTER_JOINED;
+		strncpy(nc.target_name,addr,32);
+		monitor_single_dispatch(&nc);
+		err = start_corosync_timed(addr, &nc.context_start);
+		if(err != CS_OK){
+			printf("Failed to start corosync at node %s\n", addr);
+		}
+		//printf("corosync started on node %s ( command sent at %lu )\n", addr, cmd_start);
+	}
+	// Stop corosync
+	else if(strcmp(cmd, "stop") == 0){
+		nc.change = CLUSTER_LEFT;
+		strncpy(nc.target_name,addr,32);
+		monitor_single_dispatch(&nc);
+		err = stop_corosync_timed(addr, &nc.context_start);
+		if(err != CS_OK){
+			printf("Failed to stop corosync at node %s\n", addr);
+		}
+		//printf("corosync stopped on node %s ( command sent at %lu )\n", addr, cmd_start);
+	}
+	// Reset to default conf file
+	else if(strcmp(cmd, "reset") == 0){
+		memset(src_file, sizeof(src_file), '\0');
+		strcpy(src_file, "../conf_templates/");
+		strcat(src_file, src_file_name);
+		dest_file = "/etc/corosync/corosync.conf";
+		err = copy_conf(addr, src_file, dest_file);
+		if(err != CS_OK){
+			printf("Failed to reset corosync.conf to default at node %s - error: %s\n", addr, get_error(err));
+		}
+		err = stop_corosync(addr);
+		if(err != CS_OK){
+			printf("May have reset corosync.conf to default at node %s, but something went wrong restarting corosync... - error: %s\n", addr, get_error(err));
+		}
+		printf("corosync.conf reset to %s at node %s\n", src_file_name, addr);
+	}
+	// Unrecognized command
+	else{
+		printf("Command %s not recognized.\n", cmd);
+	}
+}
 
 /* client_add_node() */
 /* Adds a node at a given ip address */
 void client_add_node(char *addr)
 {	
-	printf("Node at %s successfully added!\n", addr);
+	client_ssh_command("start", addr, NULL);
 }
 
 /* client_remove_node() */
@@ -74,29 +125,36 @@ void client_change_votes(uint32_t nodeid, uint32_t votes)
 	//success
 	printf("node %u had their quorum_votes changed to %u\n", nodeid, votes);
 }
-
+/*
 void client_ssh_command(char *cmd, char *addr, char *src_file_name)
 {
 	int err;
 	char src_file[128];
 	char *dest_file;
-	time_t cmd_time;
-	
+	long cmd_start;
+	Notify_Context nc;
+		
 	//start corosync
 	if(strcmp(cmd, "start") == 0){
-		err = start_corosync_timed(addr, &cmd_time);
+		nc.change = CLUSTER_JOINED;
+		strncpy(nc.target_name,addr,32);
+		monitor_single_dispatch(&nc);
+		err = start_corosync_timed(addr, &nc.context_start);
 		if(err != CS_OK){
 			printf("Failed to start corosync at node %s\n", addr);
 		}
-		printf("corosync started on node %s at %l\n", addr, 10);
+		//printf("corosync started on node %s ( command sent at %lu )\n", addr, cmd_start);
 	}
 	// Stop corosync
 	else if(strcmp(cmd, "stop") == 0){
-		err = stop_corosync_timed(addr, &cmd_time);
+		nc.change = CLUSTER_LEFT;
+		strncpy(nc.target_name,addr,32);
+		monitor_single_dispatch(&nc);
+		err = stop_corosync_timed(addr, &nc.context_start);
 		if(err != CS_OK){
 			printf("Failed to stop corosync at node %s\n", addr);
 		}
-		printf("corosync stopped on node %s at %l\n", addr, 10);
+		//printf("corosync stopped on node %s ( command sent at %lu )\n", addr, cmd_start);
 	}
 	// Reset to default conf file
 	else if(strcmp(cmd, "reset") == 0){
@@ -119,7 +177,7 @@ void client_ssh_command(char *cmd, char *addr, char *src_file_name)
 		printf("Command %s not recognized.\n", cmd);
 	}
 }
-
+*/
 void client_monitor_option(struct arguments *arguments)
 {
 	int err;

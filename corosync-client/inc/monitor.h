@@ -17,7 +17,10 @@
 #include <corosync/votequorum.h>
 #include "client_errors.h"
 #include "print_manager.h"
+#include "time_manager.h"
 
+
+int monitor_single_dispatch();
 int monitor_status();
 
 #endif

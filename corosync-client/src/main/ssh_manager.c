@@ -135,7 +135,7 @@ int stop_corosync(char *addr)
     return CS_OK;
 }
 
-int start_corosync_timed(char *addr, time_t *cmd_time)
+int start_corosync_timed(char *addr, long *cmd_start)
 {
 	ssh_session session;
     ssh_channel channel;
@@ -178,8 +178,10 @@ int start_corosync_timed(char *addr, time_t *cmd_time)
 		return CL_SSH_OPEN_CHANNEL_ERR;
 	}
 	//execute command
+	/////
 	//get time right before sending request
-	time(cmd_time);
+	get_microtime(cmd_start);
+	/////
     rc = ssh_channel_request_exec(channel, "corosync");
     if(rc != SSH_OK){
 		free_channel(channel);
@@ -198,7 +200,7 @@ int start_corosync_timed(char *addr, time_t *cmd_time)
     return CS_OK;
 }
 
-int stop_corosync_timed(char *addr, time_t *cmd_time)
+int stop_corosync_timed(char *addr, long *cmd_start)
 {
 	ssh_session session;
     ssh_channel channel;
@@ -241,8 +243,9 @@ int stop_corosync_timed(char *addr, time_t *cmd_time)
 		return CL_SSH_OPEN_CHANNEL_ERR;
 	}
 	//execute command
-	//get time right before sending request
-	time(cmd_time);
+	/////get time right before sending request
+	get_microtime(cmd_start);
+	///////
     rc = ssh_channel_request_exec(channel, "corosync-cfgtool -H");
     if(rc != SSH_OK){
 		free_channel(channel);

@@ -40,12 +40,15 @@ static void votequorum_notification_fn(
 	votequorum_ring_id_t ring_id,
 	uint32_t node_list_entries,
 	uint32_t node_list[]);
+
 static votequorum_handle_t v_handle;
+
 static votequorum_callbacks_t v_callbacks = {
 	.votequorum_quorum_notify_fn = NULL,
 	.votequorum_expectedvotes_notify_fn = NULL,
 	.votequorum_nodelist_notify_fn = votequorum_notification_fn,
 };
+
 static uint32_t our_nodeid = 0;
 
 //cfg stuff
@@ -53,6 +56,49 @@ static corosync_cfg_handle_t c_handle;
 static corosync_cfg_callbacks_t c_callbacks = {
 	.corosync_cfg_shutdown_callback = NULL
 };
+
+//our client stuff
+static Notify_Context *n_context;
+static long n_time_received;
+
+static void votequorum_notification_fn(
+	votequorum_handle_t handle,
+	uint64_t context,
+	votequorum_ring_id_t ring_id,
+	uint32_t node_list_entries,
+	uint32_t node_list[])
+{
+	get_microtime(&n_time_received);
+	n_context->context_end = n_time_received;
+	g_ring_id_rep_node = ring_id.nodeid;
+	g_vq_called = 1;
+}
+
+static void quorum_notification_fn(
+	quorum_handle_t handle,
+	uint32_t quorate,
+	uint64_t ring_id,
+	uint32_t view_list_entries,
+	uint32_t *view_list)
+{
+    int i;
+
+	g_called = 1;
+	g_quorate = quorate;
+	g_ring_id = ring_id;
+	g_view_list_entries = view_list_entries;
+	if (g_view_list) {
+		free(g_view_list);
+	}
+	g_view_list = malloc(sizeof(view_list_entry_t) * view_list_entries);
+	if (g_view_list) {
+	        for (i=0; i< view_list_entries; i++) {
+		    g_view_list[i].node_id = view_list[i];
+			g_view_list[i].name = NULL;
+			g_view_list[i].vq_info = NULL;
+		}
+	}
+}
 
 static int get_quorum_type(char *quorum_type, size_t quorum_type_len)
 {
@@ -104,42 +150,6 @@ static int using_votequorum(void)
 	return using_voteq;
 }
 
-static void votequorum_notification_fn(
-	votequorum_handle_t handle,
-	uint64_t context,
-	votequorum_ring_id_t ring_id,
-	uint32_t node_list_entries,
-	uint32_t node_list[])
-{
-	g_ring_id_rep_node = ring_id.nodeid;
-	g_vq_called = 1;
-}
-
-static void quorum_notification_fn(
-	quorum_handle_t handle,
-	uint32_t quorate,
-	uint64_t ring_id,
-	uint32_t view_list_entries,
-	uint32_t *view_list)
-{
-    int i;
-
-	g_called = 1;
-	g_quorate = quorate;
-	g_ring_id = ring_id;
-	g_view_list_entries = view_list_entries;
-	if (g_view_list) {
-		free(g_view_list);
-	}
-	g_view_list = malloc(sizeof(view_list_entry_t) * view_list_entries);
-	if (g_view_list) {
-	        for (i=0; i< view_list_entries; i++) {
-		    g_view_list[i].node_id = view_list[i];
-			g_view_list[i].name = NULL;
-			g_view_list[i].vq_info = NULL;
-		}
-	}
-}
 
 static int init_all(void) {
 	cmap_handle = 0;
@@ -160,7 +170,7 @@ static int init_all(void) {
 	}
 
 	if (corosync_cfg_initialize(&c_handle, &c_callbacks) != CS_OK) {
-		fprintf(stderr, "Cannot initialise CFG service\n");
+		fprintf(stderr, "Cannot initialize CFG service\n");
 		c_handle = 0;
 		goto out;
 	}
@@ -170,7 +180,7 @@ static int init_all(void) {
 	}
 
 	if (votequorum_initialize(&v_handle, &v_callbacks) != CS_OK) {
-		fprintf(stderr, "Cannot initialise VOTEQUORUM service\n");
+		fprintf(stderr, "Cannot initialize VOTEQUORUM service\n");
 		v_handle = 0;
 		goto out;
 	}
@@ -203,6 +213,7 @@ static void close_all(void) {
 static int loop()
 {
 	int err;
+	int i;
 	
 	if (q_type == QUORUM_FREE) {
 		printf("\nQuorum is not configured - cannot monitor\n");
@@ -221,7 +232,7 @@ static int loop()
 			return -1;
 		}
 	}
-	
+	i = 0;
 	while(1){
 		err = votequorum_dispatch(v_handle, CS_DISPATCH_ONE);
 		if (err != CS_OK) {
@@ -236,7 +247,51 @@ static int loop()
 		if(err != CS_OK){
 			return err;
 		}
+		printf("\nloop %d\n", i);
 	}
+}
+
+static int single_dispatch()
+{
+	int err;
+	
+	if (q_type == QUORUM_FREE) {
+		printf("\nQuorum is not configured - cannot monitor\n");
+		return -1;
+	}
+
+	err=quorum_trackstart(q_handle, CS_TRACK_CHANGES);
+	if (err != CS_OK) {
+		fprintf(stderr, "Unable to start quorum status tracking: %s\n", cs_strerror(err));
+		return -1;
+	}
+
+	if (using_votequorum()) {
+		if ( (err=votequorum_trackstart(v_handle, 0LL, CS_TRACK_CHANGES)) != CS_OK) {
+			fprintf(stderr, "Unable to start votequorum status tracking: %s\n", cs_strerror(err));
+			return -1;
+		}
+	}
+	err = votequorum_dispatch(v_handle, CS_DISPATCH_ONE);
+	if (err != CS_OK) {
+		fprintf(stderr, "Unable to dispatch quorum status: %s\n", cs_strerror(err));
+		return -1;
+	}
+	
+	print_notification(n_context);
+}
+
+int monitor_single_dispatch(Notify_Context *nc)
+{
+	int err;
+	if (init_all()) {
+		close_all();
+		return -1;
+	}
+	n_context = nc;
+	err = single_dispatch();
+	close_all();
+	return CS_OK;
 }
 
 int monitor_status()
