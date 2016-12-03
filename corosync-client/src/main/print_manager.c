@@ -66,11 +66,11 @@ int print_notification(Notify_Context *nc)
 	
 	switch(nc->change){
 		case CLUSTER_JOINED:
-			printf("Node at %s succefully joined the cluster. Time Completed: %lu microseconds = %f milliseconds\n", nc->target_name, delta_microtime(nc->context_start, nc->context_end), micro_to_milli(delta_microtime(nc->context_start, nc->context_end)));
+			printf("Node at %s succefully joined the cluster.\nTime Completed: %lu microseconds = %f milliseconds\n", nc->target_name, delta_microtime(nc->context_start, nc->context_end), micro_to_milli(delta_microtime(nc->context_start, nc->context_end)));
 			break;
 			
 		case CLUSTER_LEFT:
-			printf("Node at %s has left the cluster. Time Completed: %lu microseconds = %f milliseconds\n", nc->target_name, delta_microtime(nc->context_start, nc->context_end), micro_to_milli(delta_microtime(nc->context_start, nc->context_end)));
+			printf("Node at %s has left the cluster.\nTime Completed: %lu microseconds = %f milliseconds\n", nc->target_name, delta_microtime(nc->context_start, nc->context_end), micro_to_milli(delta_microtime(nc->context_start, nc->context_end)));
 			break;
 			
 		default:

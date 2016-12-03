@@ -166,3 +166,27 @@ int set_votes(uint32_t nodeid, unsigned int votes)
 	votequorum_finalize(vq_h);
 	return CS_OK;
 }
+
+int mark_eligible(uint32_t e_id)
+{
+	int err;
+	
+	err = set_votes(e_id, 2);
+	if(err != CS_OK){
+		return err;
+	}
+	
+	return CS_OK;
+}
+
+int mark_ineligible(uint32_t e_id)
+{
+	int err;
+	
+	err = set_votes(e_id, 0);
+	if(err != CS_OK){
+		return err;
+	}
+	
+	return CS_OK;
+}

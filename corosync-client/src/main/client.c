@@ -26,14 +26,17 @@ enum client_task{
 	set_option,
 	print_option,
 	quorum_option,
-	logging_option,
+	timed_option,
 	monitor_option,
+	eligibility_option,
 	ssh_cmd
 } task;
 
 
 const char *argp_program_bug_address = "charliemietzner@gmail.com";
 const char *argp_program_version = "version 12.1.16";
+
+static int timed;
 
 void client_ssh_command(char *cmd, char *addr, char *src_file_name)
 {
@@ -104,13 +107,13 @@ void client_remove_node(char *addr)
 /* client_add_epsilon() */
 void client_add_epsilon(char *addr)
 {
-	printf("epsilon changed successfully\n");
+	printf("place holder\n");
 }
 
 /* client_add_epsilon() */
 void client_remove_epsilon(char *addr)
 {
-	printf("epsilon changed successfully\n");
+	printf("place holder\n");
 }
 
 /* client_change_votes() */
@@ -125,6 +128,41 @@ void client_change_votes(uint32_t nodeid, uint32_t votes)
 	//success
 	printf("node %u had their quorum_votes changed to %u\n", nodeid, votes);
 }
+
+void client_set_expected_votes(uint32_t votes)
+{
+	int err;
+	
+	err = set_expected_votes(votes);
+	if(err != CS_OK){
+		printf("failed to set expected votes: %s\n",get_error(err));
+	}
+	//success
+	printf("the total expected votes was set to to %u\n", votes);
+}
+
+void client_change_eligibility(char *mode, uint32_t *id1) 
+{
+	int err;
+	
+	// mark eligible
+	if(strcmp(mode, "mark_eligible") == 0){
+		err = mark_eligible(*id1);
+		if(err != CS_OK){
+			printf("there was an error marking node eligible - error: %s\n", get_error(err));
+			return;
+		}
+	}
+	// mark ineligible
+	else if(strcmp(mode, "mark_ineligible") == 0) {
+		err = mark_ineligible(*id1);
+		if(err != CS_OK){
+			printf("there was an error marking node ineligible - error: %s\n", get_error(err));
+			return;
+		}
+	}
+}
+
 /*
 void client_ssh_command(char *cmd, char *addr, char *src_file_name)
 {
@@ -242,15 +280,52 @@ void client_quorum_option(struct arguments *arguments)
 			//call client_change_vote
 			client_change_votes(nodeid, votes);
 		}
-		
+		//change expected_votes
+		else if(strcmp(q_option, "set_expected") == 0){
+			//get node id
+			nodeid = (uint32_t)atoi(q_target);
+			//get votes
+			q_target = argz_next(arguments->argz, arguments->argz_len, q_target);
+			votes = atoi(q_target);
+			//call client_set_expected_vote
+			client_set_expected_votes(votes);
+			break;
+		}
 		prev = q_target;
 	}
 }
 
-void client_logging_option(struct arguments *arguments)
+void client_eligibity_option(struct arguments *arguments)
 {
 	int err;
-	char *logging_target;
+	char *e_target;
+	const char *prev;
+	char *addr;
+	uint32_t id1;
+	
+	prev = NULL;
+	e_target = argz_next(arguments->argz, arguments->argz_len, prev);
+	prev = e_target;
+	while(addr = argz_next(arguments->argz, arguments->argz_len, prev)){
+		// mark eligible
+		if(strcmp(e_target, "mark_eligible") == 0){
+			id1 = (uint32_t)atoi(addr);
+			client_change_eligibility(e_target, &id1);
+			break;
+		}
+		// mark ineligible
+		else if(strcmp(e_target, "mark_ineligible") == 0){
+			id1 = (uint32_t)atoi(addr);
+			client_change_eligibility(e_target, &id1);
+			break;
+		}
+		// unknown e_target
+		else{
+			break;
+		}
+		
+		prev = addr;
+	}
 }
 
 void client_add_option(struct arguments *arguments)
@@ -259,9 +334,7 @@ void client_add_option(struct arguments *arguments)
 	char *add_target;
 	const char *prev;
 	char *addr;
-	struct timespec half_sec;
 
-	half_sec.tv_nsec = 500000000;
 	prev = NULL;
 	add_target = argz_next(arguments->argz, arguments->argz_len, prev);
 	prev = add_target;
@@ -278,7 +351,6 @@ void client_add_option(struct arguments *arguments)
 			break;
 		}
 		prev = addr;
-		nanosleep(&half_sec, NULL); //updating conf files and restarting corosync takes some time, so we sleep between executions
 	}
 }
 
@@ -350,6 +422,12 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		task = add_option;
 		argz_add(&a->argz, &a->argz_len, arg);
 		break;
+	
+	//eligibility_option
+	case 'e':
+		task = eligibility_option;
+		argz_add(&a->argz, &a->argz_len, arg);
+		break;
 			
 	//remove_option
 	case 'r':
@@ -387,10 +465,9 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		argz_add(&a->argz, &a->argz_len, arg);
 		break;
 	
-	//logging_option
-	case 'l':
-		task = logging_option;
-		argz_add(&a->argz, &a->argz_len, arg);
+	//timed option
+	case 't':
+		timed = 1;
 		break;
 			
 	//argp stuff
@@ -426,13 +503,14 @@ int main(int argc, char **argv)
 		{"remove", 'r', "<cluster_option> <node-ip-addr>", 0, "removes a cluster option (usually a node) from the cluster."},
 		{"command", 'c', "<ssh-command> <node-ip-addr>", 0, "uses ssh to remotely execute command at target node in the cluster."},
 		{"print", 'p', "<corosync-item>", 0, "prints the status of corosync target item"},
-		{"logging", 'l',"<nothing>", 0, "begins logging locally"},
 		{"monitor", 'm',"<nothing>", 0, "begins monitoring locally"},
 		{"quorum", 'q', "<quorum-setting>", 0, "changes a quorum setting"},
+		{"eligibility", 'e', "<eligiblity-setting>", 0, "changes a eligibity setting"},
 		{0}
 	};
 	struct argp argp = {options, parse_opt, 0, 0, 0, 0, 0};
 	struct arguments arguments;
+	timed = -1;
 	printf("\n");
 	if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0){
 		switch(task){
@@ -448,13 +526,13 @@ int main(int argc, char **argv)
 			case remove_option:
 				client_remove_option(&arguments);
 				break;
+			
+			case eligibility_option:
+				client_eligibity_option(&arguments);
+				break;
 				
 			case ssh_cmd:
 				client_ssh_option(&arguments);
-				break;
-				
-			case logging_option:
-				client_logging_option(&arguments);
 				break;
 			
 			case monitor_option:

@@ -21,5 +21,5 @@ long delta_microtime(long start_time, long end_time)
 
 float micro_to_milli(long microseconds)
 {
-	return microseconds * 1000;
+	return ((float)microseconds / 1000);
 }

@@ -1,4 +1,5 @@
 #include "monitor.h"
+#include "print_manager.h"
 
 //cmap stuff
 static cmap_handle_t cmap_handle;

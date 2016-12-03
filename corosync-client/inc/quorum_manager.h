@@ -25,5 +25,9 @@ int set_expected_votes(unsigned int expected_votes);
 int get_votes(uint32_t nodeid, unsigned int *votes);
 //sets node #nodeid to have votes = votes
 int set_votes(uint32_t nodeid, unsigned int votes);
+//
+int mark_eligible(uint32_t e_id);
+//
+int mark_ineligible(uint32_t e_id);
 
 #endif /* QUORUM_MANAGER_H */
