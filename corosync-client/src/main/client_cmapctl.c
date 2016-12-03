@@ -1,6 +1,6 @@
 #include "client_cmapctl.h"
 
-int client_set_cmap_value(const char *key_name, void *value, cmap_value_types_t type)
+int set_cmap_value(const char *key_name, void *value, cmap_value_types_t type)
 {
 	cs_error_t cs_err;
 	cmap_handle_t cmap_handle;
@@ -115,7 +115,7 @@ int client_set_cmap_value(const char *key_name, void *value, cmap_value_types_t 
 	return CS_OK;
 }
 
-int client_get_cmap_value(const char *key_name, void *value, cmap_value_types_t type)
+int get_cmap_value(const char *key_name, void *value, cmap_value_types_t *type)
 {
 	cs_error_t cs_err;
 	cmap_handle_t cmap_handle;
@@ -127,128 +127,58 @@ int client_get_cmap_value(const char *key_name, void *value, cmap_value_types_t 
 		return cs_err;
 	}
 	//check if key exists in cmap
-	cs_err = cmap_get(cmap_handle, key_name, NULL, &len, &type);
+	cs_err = cmap_get(cmap_handle, key_name, NULL, &len, type);
 	if(cs_err != CS_OK){
 		(void)cmap_finalize(cmap_handle);
 		return cs_err;
 	}
-	//get key from cmap
-	//if value is a string, this function doesn't deal with that
-	if(type == CMAP_VALUETYPE_STRING){
-		(void)cmap_finalize(cmap_handle);
-		return CL_WRONG_CMAP_TYPE;
-	}
-	else{
-		cs_err = cmap_get(cmap_handle, key_name, value, &len, &type);
-		if(cs_err != CS_OK){
-			(void)cmap_finalize(cmap_handle);
-			return cs_err;
-		}
-	}
-	//hey look we were successful
-	(void)cmap_finalize(cmap_handle);
-	return CS_OK;
-}
-
-int client_get_cmap_string_value(const char *key_name, char **value)
-{
-	cs_error_t cs_err;
-	cmap_handle_t cmap_handle;
-	size_t len;
-	cmap_value_types_t type;
-
-	//initialize cmap
-	cs_err = cmap_initialize(&cmap_handle);
-	if(cs_err != CS_OK){
-		return cs_err;
-	}
-	//check if key exists in cmap
-	cs_err = cmap_get(cmap_handle, key_name, NULL, &len, &type);
-	if(cs_err != CS_OK){
+	//if this function was called with null, we just want to return and confirm key was in place
+	if(value == NULL){
 		(void)cmap_finalize(cmap_handle);
 		return cs_err;
 	}
-	//check type
-	if(type != CMAP_VALUETYPE_STRING){
-		(void)cmap_finalize(cmap_handle);
-		return CL_WRONG_CMAP_TYPE;
-	}
-	//get key from cmap
-	cs_err = cmap_get_string(cmap_handle, key_name, value);
-	if(cs_err != CS_OK){
-		(void)cmap_finalize(cmap_handle);
-		return cs_err;
-	}
-	//hey look we were successful
-	(void)cmap_finalize(cmap_handle);
-	return CS_OK;
-}
-
-int client_delete_cmap_value(const char *key_name, void *value, cmap_value_types_t type)
-{
-	cs_error_t cs_err;
-	cmap_handle_t cmap_handle;
-	size_t len;
-	
-	//initialize cmap
-	cs_err = cmap_initialize(&cmap_handle);
-	if(cs_err != CS_OK){
-		return cs_err;
-	}
-	//check if key exists in cmap
-	cs_err = cmap_get(cmap_handle, key_name, NULL, &len, &type);
-	if(cs_err != CS_OK){
-		(void)cmap_finalize(cmap_handle);
-		return cs_err;
-	}
-	//if the caller wants us to return the deleted value
-	if(value != NULL){
-		//get key from cmap
-		cs_err = cmap_get(cmap_handle, key_name, value, &len, &type);
-	}
-	if(cs_err != CS_OK){
-		(void)cmap_finalize(cmap_handle);
-		return cs_err;
-	}
-	//actually delete the key from cmap
-	cs_err = cmap_delete(cmap_handle, key_name);
-	if(cs_err != CS_OK){
-		(void)cmap_finalize(cmap_handle);
-		return cs_err;
-	}
-	//hey look we were successful
-	(void)cmap_finalize(cmap_handle);
-	return CS_OK;
-}
-
-int client_delete_cmap_string_value(const char *key_name, char **value)
-{
-	cs_error_t cs_err;
-	cmap_handle_t cmap_handle;
-	size_t len;
-	cmap_value_types_t type;
-	
-	//initialize cmap
-	cs_err = cmap_initialize(&cmap_handle);
-	if(cs_err != CS_OK){
-		return cs_err;
-	}
-	//check if key exists in cmap
-	cs_err = cmap_get(cmap_handle, key_name, NULL, &len, &type);
-	if(cs_err != CS_OK){
-		(void)cmap_finalize(cmap_handle);
-		return cs_err;
-	}
-	//check type
-	if(type != CMAP_VALUETYPE_STRING){
-		(void)cmap_finalize(cmap_handle);
-		return CL_WRONG_CMAP_TYPE;
-	}
-	//if the caller wants us to return the deleted value
-	if(value != NULL){
-		//get key from cmap
+	//otherwise, we wnt to get key from cmap
+	if(*type == CMAP_VALUETYPE_STRING){
 		cs_err = cmap_get_string(cmap_handle, key_name, value);
 	}
+	else{
+		cs_err = cmap_get(cmap_handle, key_name, value, &len, type);
+	}
+	if(cs_err != CS_OK){
+		(void)cmap_finalize(cmap_handle);
+		return cs_err;
+	}
+	//hey look we were successful
+	(void)cmap_finalize(cmap_handle);
+	return CS_OK;
+}
+
+int delete_cmap_value(const char *key_name, void *value, cmap_value_types_t *type)
+{
+	cs_error_t cs_err;
+	cmap_handle_t cmap_handle;
+	size_t len;
+	
+	//initialize cmap
+	cs_err = cmap_initialize(&cmap_handle);
+	if(cs_err != CS_OK){
+		return cs_err;
+	}
+	//check if key exists in cmap
+	cs_err = cmap_get(cmap_handle, key_name, NULL, &len, type);
+	if(cs_err != CS_OK){
+		(void)cmap_finalize(cmap_handle);
+		return cs_err;
+	}
+	//if the caller wants us to return the deleted value
+	if(value != NULL){
+		if(*type == CMAP_VALUETYPE_STRING){
+			cs_err = cmap_get_string(cmap_handle, key_name, value);
+		}
+		else{
+			cs_err = cmap_get(cmap_handle, key_name, value, &len, type);
+		}
+	}
 	if(cs_err != CS_OK){
 		(void)cmap_finalize(cmap_handle);
 		return cs_err;
@@ -264,28 +194,7 @@ int client_delete_cmap_string_value(const char *key_name, char **value)
 	return CS_OK;
 }
 
-int client_get_cmap_key_type(const char *key_name, cmap_value_types_t *type, size_t *len)
-{
-	cs_error_t cs_err;
-	cmap_handle_t cmap_handle;
-	
-	//initialize cmap
-	cs_err = cmap_initialize(&cmap_handle);
-	if(cs_err != CS_OK){
-		return cs_err;
-	}
-	//check if key exists in cmap
-	cs_err = cmap_get(cmap_handle, key_name, NULL, len, type);
-	if(cs_err != CS_OK){
-		(void)cmap_finalize(cmap_handle);
-		return cs_err;
-	}
-	//hey look we were successful
-	(void)cmap_finalize(cmap_handle);
-	return CS_OK;
-}
-
-int nodelist_get_total(int *total)
+int get_member_count(int *count)
 {
 	int err;
 	cmap_handle_t cmap_handle;
@@ -293,8 +202,11 @@ int nodelist_get_total(int *total)
 	char key_name[CMAP_KEYNAME_MAXLEN + 1]; //this stores the key name found by the iterator
 	cmap_value_types_t type;
 	size_t len;
-	const char *generic_id_key = "nodelist.node.X.";
-	int count;
+	const char *generic_key_prefix = "runtime.totem.pg.mrp.srp.members.";
+	int total;
+	int prev;
+	int id;
+	int i;
 	
 	//initialize cmap handle
 	err = cmap_initialize(&cmap_handle);
@@ -302,26 +214,29 @@ int nodelist_get_total(int *total)
 		return err;
 	}
 	//initialize iterator handle (we are looking for all nodeid)
-	err = cmap_iter_init(cmap_handle, "nodelist.node.", &iter_handle);
+	err = cmap_iter_init(cmap_handle, generic_key_prefix, &iter_handle);
 	if(err != CS_OK){
 		(void)cmap_finalize(cmap_handle);
 		return err;
 	}
 	//count nodes in iterator
-	count = 0;
+	prev = -1;
+	total = 0;
 	while((err = cmap_iter_next(cmap_handle, iter_handle, key_name, &len, &type)) == CS_OK){
-		//find nodeid key
-		if(strcmp(&key_name[strlen(generic_id_key)], "nodeid") == 0){
-			count++;
+		//find a unique node id
+		sscanf(key_name, "runtime.totem.pg.mrp.srp.members.%d", &id);
+		if(id != prev){
+			prev = id;
+			total++;
 		}
 	}
-	*total = count;
 	(void)cmap_iter_finalize(cmap_handle, iter_handle);
 	(void)cmap_finalize(cmap_handle);
+	*count = total;
 	return CS_OK;
 }
 
-int nodelist_get_id_array(uint32_t **list)
+int get_members(Cluster_Member **array, int array_len)
 {
 	int err;
 	cmap_handle_t cmap_handle;
@@ -329,9 +244,13 @@ int nodelist_get_id_array(uint32_t **list)
 	char key_name[CMAP_KEYNAME_MAXLEN + 1]; //this stores the key name found by the iterator
 	cmap_value_types_t type;
 	size_t len;
-	const char *generic_id_key = "nodelist.node.X.";
+	char **str;
+	char key_suffix[64]; //no key suffix is going to be larger than this
+	const char *generic_key_prefix = "runtime.totem.pg.mrp.srp.members.";
+	int total;
+	int prev;
+	int id;
 	int i;
-	int j;
 	
 	//initialize cmap handle
 	err = cmap_initialize(&cmap_handle);
@@ -339,83 +258,79 @@ int nodelist_get_id_array(uint32_t **list)
 		return err;
 	}
 	//initialize iterator handle (we are looking for all nodeid)
-	err = cmap_iter_init(cmap_handle, "nodelist.node.", &iter_handle);
+	err = cmap_iter_init(cmap_handle, generic_key_prefix, &iter_handle);
 	if(err != CS_OK){
 		(void)cmap_finalize(cmap_handle);
 		return err;
 	}
-	i = 0;
+	//count nodes in iterator
+	prev = -1;
+	i = -1;
 	while((err = cmap_iter_next(cmap_handle, iter_handle, key_name, &len, &type)) == CS_OK){
-		//find nodeid key
-		if(strcmp(&key_name[strlen(generic_id_key)], "nodeid") == 0){
-			list[i] = malloc(sizeof(uint32_t));
-			err = client_get_cmap_value(key_name, list[i], CMAP_VALUETYPE_UINT32);
+		//find a unique node id
+		memset(key_suffix, sizeof(key_suffix), '\0');
+		sscanf(key_name, "runtime.totem.pg.mrp.srp.members.%d.%s", &id, key_suffix);
+		if(id != prev){
+			prev = id;
 			i++;
-			if(err != CS_OK){
-				break;
+			array[i]->nodeid = id;
+		}
+		if(strcmp(key_suffix, "ip") == 0){
+			memset(array[i]->ip, sizeof(array[i]->ip), '\0');
+			str = malloc(sizeof(char *));
+			err = get_cmap_value(key_name, str, &type);
+			if(err == CS_OK){
+				strcpy(array[i]->ip, *str);
+				free(*str);
 			}
+			free(str);
+		}
+		else if(strcmp(key_suffix, "status") == 0){
+			memset(array[i]->status, sizeof(array[i]->status), '\0');
+			str = malloc(sizeof(char *));
+			err = get_cmap_value(key_name, str, &type);
+			if(err == CS_OK){
+				strcpy(array[i]->status, *str);
+				free(*str);
+			}
+			free(str);
 		}
 	}
-	if(err != CS_OK && err != CS_ERR_NO_SECTIONS){
-		//if there was some kind of error we need to free anything we've malloc'd up until that point
-		for(j = 0; j < i; j++){
-			free(list[j]);
-		}
-		(void)cmap_iter_finalize(cmap_handle, iter_handle);
-		(void)cmap_finalize(cmap_handle);
-		return err;
-	}
-	//hey look! we were successful!
+	
+	//success
 	(void)cmap_iter_finalize(cmap_handle, iter_handle);
 	(void)cmap_finalize(cmap_handle);
 	return CS_OK;
 }
 
-int nodelist_get_addr_array(char **list)
+int generate_nodelist_key(char *key_buffer, uint32_t id, char *key_suffix)
 {
-	int err;
-	cmap_handle_t cmap_handle;
-	cmap_iter_handle_t iter_handle;
-	char key_name[CMAP_KEYNAME_MAXLEN + 1]; //this stores the key name found by the iterator
-	cmap_value_types_t type;
-	size_t len;
-	const char *generic_id_key = "nodelist.node.X.";
-	int i;
-	int j;
-	
-	//initialize cmap handle
-	err = cmap_initialize(&cmap_handle);
-	if(err != CS_OK){
-		return err;
-	}
-	//initialize iterator handle (we are looking for all ring0_addr)
-	err = cmap_iter_init(cmap_handle, "nodelist.node.", &iter_handle);
-	if(err != CS_OK){
-		(void)cmap_finalize(cmap_handle);
-		return err;
-	}
-	i = 0;
-	while((err = cmap_iter_next(cmap_handle, iter_handle, key_name, &len, &type)) == CS_OK){
-		//find nodeid key
-		if(strcmp(&key_name[strlen(generic_id_key)], "ring0_addr") == 0){
-			err = client_get_cmap_string_value(key_name, &list[i]);
-			i++;
-			if(err != CS_OK){
-				break;
-			}
-		}
-	}
-	if(err != CS_OK && err != CS_ERR_NO_SECTIONS){
-		//if there was some kind of error we need to free anything we've malloc'd up until that point
-		for(j = 0; j < i; j++){
-			free(list[j]);
-		}
-		(void)cmap_iter_finalize(cmap_handle, iter_handle);
-		(void)cmap_finalize(cmap_handle);
-		return err;
-	}
-	//hey look! we were successful!
-	(void)cmap_iter_finalize(cmap_handle, iter_handle);
-	(void)cmap_finalize(cmap_handle);
+	int err; //There may be some room in this function to add some error checking
+
+	//set up our key buffers
+	memset(key_buffer, '\0', sizeof(key_buffer));
+	//copy first half of key
+	strcpy(key_buffer, "nodelist.node.");
+	//convert unique id to char and add to key buffers
+	sprintf(&key_buffer[strlen(key_buffer)], "%u.", id);
+	//append suffix and we are good!
+	strcat(key_buffer, key_suffix);
+	//There may be some room in this function to add some error checking
+	return CS_OK;
+}
+
+int generate_members_key(char *key_buffer, uint32_t id, char *key_suffix)
+{
+	int err; //There may be some room in this function to add some error checking
+
+	//set up our key buffers
+	memset(key_buffer, '\0', sizeof(key_buffer));
+	//copy first half of key
+	strcpy(key_buffer, "runtime.totem.pg.mrp.srp.members.");
+	//convert unique id to char and add to key buffers
+	sprintf(&key_buffer[strlen(key_buffer)], "%u.", id);
+	//append suffix and we are good!
+	strcat(key_buffer, key_suffix);
+	//There may be some room in this function to add some error checking
 	return CS_OK;
 }

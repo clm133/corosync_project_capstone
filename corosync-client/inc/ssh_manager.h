@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "client_errors.h"
 
@@ -14,11 +15,15 @@
 void free_channel(ssh_channel channel);
 //helper function which frees session for ssh functions
 void free_session(ssh_session session);
-//sends the command 'corosync' to the address provided, returns 0 on success or client_error_t on 
+//sends the command 'corosync' to the address provided, returns 0 on success or client_error_t on failure
 int start_corosync(char *addr);
-//sends the command 'corosync-cfgtool -H' to the address provided, returns 0 on success or client_error_t on 
+//sends the command 'corosync-cfgtool -H' to the address provided, returns 0 on success or client_error_t on failrue
 int stop_corosync(char *addr);
-//just calls start_corosync and then stop_corosync()
+//same as the normal start command, but records the time right before command is sent
+int start_corosync_timed(char *addr, time_t *cmd_time);
+//same as the normal stop command, but records the time right before command is sent
+int stop_corosync_timed(char *addr, time_t *cmd_time);
+// just a call to stop_corosync() and then start_corosync()
 int restart_corosync(char *addr);
 
 #endif /* SSH_MANAGER_H */

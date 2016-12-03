@@ -17,7 +17,7 @@ OUT = $(BDIR)/client-testing
 
 _TOBJS = client_tests_main.o
 TOBJS = $(patsubst %,$(ODIR)/%,$(_TOBJS))
-OBJS = $(ODIR)/client_cmapctl.o $(ODIR)/cluster_manager.o $(ODIR)/quorum_manager.o $(ODIR)/conf_manager.o $(ODIR)/ssh_manager.o $(ODIR)/sftp_manager.o $(ODIR)/cs_errors.o $(ODIR)/client_errors.o 
+OBJS = $(ODIR)/client_cmapctl.o $(ODIR)/ssh_manager.o $(ODIR)/sftp_manager.o $(ODIR)/client_errors.o 
 
 $(ODIR)/%.o: $(TDIR)/%.c
 	$(CC) $(INC) -c -o $@ $<

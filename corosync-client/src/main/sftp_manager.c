@@ -81,13 +81,13 @@ int copy_conf(char *addr, char *source_file,  char *dest_directory)
     rc = ssh_connect(session);
     if(rc != SSH_OK){
 		free_session(session);
-		return CL_SFTP_ERR;
+		return CL_SFTP_CONN;
 	}
 	//authenticate session
     rc = ssh_userauth_password(session, NULL, "root");
     if(rc != SSH_AUTH_SUCCESS){
 		free_session(session);
-		return CL_SFTP_ERR;
+		return CL_SFTP_AUTH;
 	}
 	//sftp corosync.conf file
 	rc = sftp_conf(session, source_file, dest_directory);
@@ -98,25 +98,4 @@ int copy_conf(char *addr, char *source_file,  char *dest_directory)
 	//success - free everything
     free_session(session);
     return CS_OK;
-}
-
-int update_all(char **nodelist, int nodelist_size, char *source_file,  char *dest_directory)
-{
-	int err;
-	int flag;
-	int i;
-	
-	flag = CS_OK;
-	for(i = 0; i < nodelist_size; i++){
-		err = copy_conf(nodelist[i], source_file, dest_directory);
-		if(err != CS_OK){
-			flag = err;
-		}
-		err = restart_corosync(nodelist[i]);
-		if(err != CS_OK){
-			flag = err;
-		}
-	}
-	
-	return flag;
 }

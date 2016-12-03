@@ -3,8 +3,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "cs_errors.h"
+#include <corosync/cmap.h>
+#include <corosync/quorum.h>
+#include <corosync/votequorum.h>
 
 typedef enum {
 	CL_FILE_NOT_FOUND = -1, 
@@ -16,9 +17,10 @@ typedef enum {
 	CL_SSH_COMMAND_EXEC_FAIL = -7,
 	CL_NODEID_ERR = -8,
 	CL_SFTP_ERR = -9,
+	CL_SFTP_AUTH = -10,
+	CL_SFTP_CONN = -11
 } client_error_t;
 
-const char *get_client_error(client_error_t err);
 const char *get_error(int err);
 
 #endif /* CLIENT_ERRORS_H */

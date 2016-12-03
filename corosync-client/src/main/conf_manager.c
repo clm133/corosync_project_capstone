@@ -15,39 +15,37 @@ int create_conf_line(char *key_name, char *value_name, char *line)
 	strcpy(line, value_name);
 	strcat(line, ": ");
 	//get key type
-	err = client_get_cmap_key_type(key_name, &type, &len);
+	err = get_cmap_value(key_name, NULL, &type);
 	if(err != CS_OK){
 		return err;
 	}
-	//if key type is not a string
-	if(type != CMAP_VALUETYPE_STRING){
-		val = malloc(len);
-		err = client_get_cmap_value(key_name, val, type);
-		if(err != CS_OK){
-			free(val);
-			return err;
-		}
-		switch(type){
+	//switch according to value type (uint32 and string supported)
+	switch(type){
 			case CMAP_VALUETYPE_UINT32:
+				val = malloc(sizeof(uint32_t));
+				err = get_cmap_value(key_name, val, &type);
+				if(err != CS_OK){
+					free(val);
+					return err;
+				}
 				sprintf(&line[strlen(line)], "%u", *(uint32_t *)val);
 				free(val);
 				break;
+			
+		case CMAP_VALUETYPE_STRING:
+				str = malloc(sizeof(char *));
+				err = get_cmap_value(key_name, str, &type);
+				if(err != CS_OK){
+					free(str);
+					return err;
+				}
+				strcat(line, *str);
+				free(*str);
+				free(str);
+				break;
+			
 			default:
-				free(val);
 				return CL_WRONG_CMAP_TYPE;
-		}
-	}
-	//if key is a string
-	else{
-		str = malloc(sizeof(char *));
-		err = client_get_cmap_string_value(key_name, str);
-		if(err != CS_OK){
-			free(str);
-			return err;
-		}
-		strcat(line, *str);
-		free(*str);
-		free(str);
 	}
 	//success!
 	return CS_OK;
@@ -61,7 +59,7 @@ int check_for_key(char *key_name, void *def_value, cmap_value_types_t type)
 	size_t len;
 	
 	//first check if key/value is even set
-	err = client_get_cmap_key_type(key_name, &t, &len);
+	err = get_cmap_value(key_name, NULL, &t);
 	if(err == CS_OK){ 
 		//value was found so we can just return
 		return CS_OK;
@@ -70,7 +68,7 @@ int check_for_key(char *key_name, void *def_value, cmap_value_types_t type)
 	if(err != CS_ERR_NOT_EXIST){
 		return err;
 	}
-	err = client_set_cmap_value(key_name, def_value, type);
+	err = set_cmap_value(key_name, def_value, type);
 	if(err != CS_OK){
 		return err;
 	}
@@ -198,7 +196,7 @@ int write_logging(FILE *fp)
 	return CS_OK;
 }
 
-int write_node(FILE *fp, char *ring0_addr, int nodelist_size)
+int write_node(FILE *fp, int nodeid)
 {
 	int err;
 	int id;
@@ -206,12 +204,7 @@ int write_node(FILE *fp, char *ring0_addr, int nodelist_size)
 	char key_buffer[CMAP_KEYNAME_MAXLEN  + 1];
 	uint32_t ui32;
 	char *str;
-	
-	//try to find node id first
-	err = get_id_from_addr(nodelist_size, &id, ring0_addr);
-	if(err != CS_OK){
-		return err;
-	}
+	cmap_value_types_t type;
 	
 	//open node 
 	fprintf(fp, "\tnode {\n");
@@ -235,7 +228,7 @@ int write_node(FILE *fp, char *ring0_addr, int nodelist_size)
 	//write is_epsilon
 	str = "no"; //default setting for is_epsilon
 	err = generate_nodelist_key(key_buffer, (uint32_t)id, "is_epsilon");
-	err = check_for_key(key_buffer, str, CMAP_VALUETYPE_STRING);
+	err = get_cmap_value(key_buffer, NULL, &type);
 	if(err != CS_OK){
 		return err;
 	}
@@ -248,7 +241,7 @@ int write_node(FILE *fp, char *ring0_addr, int nodelist_size)
 	//write quorum_votes
 	ui32 = 2; //default setting for quorum_votes
 	err = generate_nodelist_key(key_buffer, (uint32_t)id, "quorum_votes");
-	err = check_for_key(key_buffer, &ui32, CMAP_VALUETYPE_UINT32);
+	err = get_cmap_value(key_buffer, NULL, &type);
 	if(err != CS_OK){
 		return err;
 	}
@@ -271,38 +264,38 @@ int write_nodelist(FILE *fp)
 	int total;
 	int flag;
 	int i;
-	char **nodelist;
+	Cluster_Member **nodelist;
 	
 	//get number of nodes (if any)
-	err = nodelist_get_total(&total);
+	err = get_member_count(&total);
 	if(err != CS_OK){
 		return err;
 	}
 	if(total <= 0){
 		return CS_OK;
 	}
-	
-	//get list of node addresses
-	nodelist = malloc(sizeof(char *)*total);
-	err = nodelist_get_addr_array(nodelist);
+	//allocate an array to hold a nodelist
+	nodelist = malloc(total * sizeof(Cluster_Member *));
+	for(i = 0; i < total; i++){
+		nodelist[i] = malloc(sizeof(Cluster_Member));
+	}
+	//get members of nodelist
+	err = get_members(nodelist, total);
 	if(err != CS_OK){
+		for(i = 0; i < total; i++){
+			free(nodelist[i]);
+		}
 		free(nodelist);
 		return err;
 	}
-	
 	//opening nodelist directive
 	fprintf(fp, "nodelist {\n");
 	
 	//for each node in nodelist
-	flag = CS_OK;
 	for(i = 0; i < total; i++){
-		err = write_node(fp, nodelist[i], total);
-		if(err != CS_OK){
-			flag = err;
-		}
+		write_node(fp, nodelist[i]->nodeid);
 		free(nodelist[i]);
 	}
-	free(nodelist);
 	
 	//closing  nodelist directive
 	fprintf(fp, "}\n");
