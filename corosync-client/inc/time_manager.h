@@ -13,8 +13,6 @@ long get_microtime(long *time_ptr);
 
 long delta_time(long start_time, long end_time);
 
-long get_millitime(long *time_ptr);
-
 void print_time();
 
 #endif

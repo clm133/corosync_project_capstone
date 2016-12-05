@@ -60,23 +60,3 @@ int print_quorum()
 	print_time();
 	return CS_OK;
 }
-
-int print_notification(Notify_Context *nc)
-{
-	int err;
-
-	switch(nc->change){
-		case CLUSTER_JOINED:
-			printf("Node at %s has left the cluster.\nTime Completed: %lu microseconds\n", nc->target_name, delta_time(nc->context_start, nc->context_end));
-			break;
-			
-		case CLUSTER_LEFT:
-			printf("Node at %s has left the cluster.\nTime Completed: %lu microseconds\n", nc->target_name, delta_time(nc->context_start, nc->context_end));
-			
-		default:
-			printf("unknown cluster change occured\n");
-			break;
-	}
-	
-	return CS_OK;
-}

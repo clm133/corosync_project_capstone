@@ -14,7 +14,7 @@ ODIR = obj
 ## Executables
 OUT = $(BDIR)/ctc
 
-_OBJS = client.o cluster_manager.o quorum_manager.o print_manager.o ssh_manager.o monitor.o time_manager.o sftp_manager.o conf_manager.o client_cmapctl.o client_errors.o
+_OBJS = client.o cluster_manager.o quorum_manager.o print_manager.o ssh_manager.o monitor.o time_manager.o sftp_manager.o client_cmapctl.o client_errors.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 $(ODIR)/%.o: $(SDIR)/%.c build
@@ -36,7 +36,6 @@ testrun:
 
 .PHONY: clean
 
-	
 clean:
 	rm -rf bin obj
 	find . -name "*~" -exec rm {} \;

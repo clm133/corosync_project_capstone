@@ -19,7 +19,6 @@ typedef struct Quorum_Details {
 
 //returns a quorum_details struct (see above)
 int get_quorum_info(Quorum_Details *qd);
-int get_node_total(int *id);
 //gets the expected vote
 int get_expected_votes(unsigned int *expected_votes);
 //sets the expected vote
@@ -28,10 +27,4 @@ int set_expected_votes(unsigned int expected_votes);
 int get_votes(uint32_t nodeid, unsigned int *votes);
 //sets node #nodeid to have votes = votes
 int set_votes(uint32_t nodeid, unsigned int votes);
-//sets node to have votes, and then recalculates expected votes
-int set_votes_and_adjust(uint32_t nodeid, unsigned int votes);
-int mark_eligible(uint32_t e_id);
-//
-int mark_ineligible(uint32_t e_id);
-
 #endif /* QUORUM_MANAGER_H */

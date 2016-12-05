@@ -20,14 +20,10 @@ void free_session(ssh_session session);
 int start_corosync(char *addr);
 //sends the command 'corosync-cfgtool -H' to the address provided, returns 0 on success or client_error_t on failrue
 int stop_corosync(char *addr);
-//same as the normal start command, but records the time right before command is sent
-int start_corosync_timed(char *addr, long *cmd_start);
-//same as the normal stop command, but records the time right before command is sent
-int stop_corosync_timed(char *addr, long *cmd_start);
 //shuts down eth1 at addr (must use 12.0.0.X addr)
-int kill_conn(char *addr, long *cmd_start);
+int kill_conn(char *addr);
 //brings up eth1 at addr (must use 12.0.0.X addr)
-int start_conn(char *addr, long *cmd_start);
+int start_conn(char *addr);
 // just a call to stop_corosync() and then start_corosync()
 int restart_corosync(char *addr);
 

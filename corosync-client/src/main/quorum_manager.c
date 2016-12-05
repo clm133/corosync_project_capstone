@@ -50,19 +50,6 @@ int get_votequorum_info(struct votequorum_info *vqi, unsigned int id)
 	
 }
 
-int get_node_total(int *total)
-{
-	int err;
-	unsigned int id;
-	Notify_Context nc;
-	
-	nc.change = QUERY;
-	err = query_status(&nc);
-	*total = nc.total_nodes;
-	
-	return CS_OK;
-}
-
 int get_expected_votes(unsigned int *expected_votes)
 {
 	int err;
@@ -223,34 +210,5 @@ int set_votes(uint32_t nodeid, unsigned int votes)
 	//success
 	//finalize handle
 	votequorum_finalize(vq_h);
-	return CS_OK;
-}
-
-int mark_eligible(uint32_t e_id)
-{
-	int err;
-	int votes;
-	
-	err = get_votes(e_id, &votes);
-	if(err != CS_OK){
-		return err;
-	}
-	err = set_votes_and_adjust(e_id, 2);
-	if(err != CS_OK){
-		return err;
-	}
-	
-	return CS_OK;
-}
-
-int mark_ineligible(uint32_t e_id)
-{
-	int err;
-	
-	err = set_votes_and_adjust(e_id, 0);
-	if(err != CS_OK){
-		return err;
-	}
-	
 	return CS_OK;
 }

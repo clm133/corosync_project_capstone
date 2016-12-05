@@ -20,8 +20,9 @@
 #include "cluster_manager.h"
 #include "time_manager.h"
 
+//prints membership (node id, ip, status and votes)
 int print_membership();
+//prints quorum (quorate, number of votes received, number of votes needed, also prints the time)
 int print_quorum();
-int print_notification(Notify_Context *nc);
 
 #endif /* PRINT_MANAGER_H */
