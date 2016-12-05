@@ -1,4 +1,11 @@
 Getting VM's Setup
+
+Exporting/Importing VirtualBox appliances
+Under 'File' menu, you can import/export a VirtualBox appliance file which can contain one or many VM images.
+
+The appliance file used by our application can be found here (ctc-appliance.ova): 
+  https://drive.google.com/open?id=0B4lfLgChvxq8anprOWxjdXNJVWc
+
 In virtualbox, use the "import appliance" option to import
 the ctc-appliance.ova. This should recreate the four vms used for this project.
 You should hopefully be able to then start the VM's up
