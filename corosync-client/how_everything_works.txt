@@ -1,0 +1,58 @@
+Getting VM's Setup
+In virtualbox, use the "import appliance" option to import
+the ctc-appliance.ova. This should recreate the four vms used for this project.
+You should hopefully be able to then start the VM's up
+
+login information / root passwords for ALL VM's:
+  username : user
+  password : root
+  root password: root
+  
+note: they are networked to the host computer through the "bridged adapter" network setting,
+if they are having trouble starting up this interface(eth0), change this network setting to "NAT" instead
+
+Getting VM's Time-Synchronized
+ 1) get root permissions on each node with the command 'sudo -i'
+ 2) start master PTPd on the VM  called "node1"(11.0.0.1/12.0.0.1) with this command:
+    ptpd -G -b eth2 
+ 3) start slave PTPd on the other VMs with this command:
+    ptpd -G -b eth2
+
+Running the client:
+  1) Ensure you have root permisions on every node you intend to run the testing client from with the command 'sudo -i'
+  2) Navigate to the /user/home/corosync-client directory
+  3) In this directory you will see the make file, the bin folder and the conf_template folder
+  4) If you want to try out different cluster setups, place the corosync.conf file in this conf_template folder
+  4) When you are ready to being, navigate into the bin folder and you will see the application 'ctc'
+
+Node IP Addresses:
+
+VM "Node1": corosync ring0_addr = 11.0.0.1
+            secondary internal address (for timesync/killing connections) = 12.0.0.1
+
+VM "Node2": corosync ring0_addr = 11.0.0.2
+            secondary internal address (for timesync/killing connections) = 12.0.0.2
+            
+VM "Node3": corosync ring0_addr = 11.0.0.3
+            secondary internal address (for timesync/killing connections) = 12.0.0.3
+            
+VM "Node4": corosync ring0_addr = 11.0.0.4
+            secondary internal address (for timesync/killing connections) = 12.0.0.4
+            
+Client Commands:
+  start corosync on a node: ./ctc -c start <ip-address-of-node>
+  stop corosync (gracefully) on a node: ./ctc -c start <ip-address-of-node>
+  
+  reset conf file of a node (using conf file found in conf_template folder): ./ctc -c reset_conf <name of conf file> <ip address of node to set that conf template on>
+  
+  bring down eth1 (corosync ring) connection at a given node : ./ctc -c kill_conn <ip address of node (use the 12.0.0.X)>
+  bring back up eth1 (corosync ring) connection at a given node : ./ctc -c start_conn <ip address of node (use the 12.0.0.X)>
+  
+  print membership: ./ctc -p membership
+  print quorum status: ./ctc -p quorum
+  
+  set node votes: ./ctc -q set_votes <node id> <# of votes>
+  
+  run local node in monitor mode: ./ctc -m quorum (use ctrl + c to exit monitor mode)
+  
+ 
