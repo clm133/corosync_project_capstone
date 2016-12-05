@@ -108,15 +108,17 @@ void client_ssh_command(char *cmd, char *addr, char *src_file_name)
 		printf("corosync.conf reset to %s at node %s\n", src_file_name, addr);
 	}
 	else if(strcmp(cmd, "kill_conn") == 0){
-		printf("killing connection at %s", addr);
+		printf("killing connection at %s\nTime:", addr);
+		print_time();
 		err = kill_conn(addr, &nc.context_start);
 	}
 	else if(strcmp(cmd, "start_conn") == 0){
-		printf("starting connection at %s", addr);
+		printf("starting connection at %s\nTime:", addr);
+		print_time();
 		err = start_conn(addr, &nc.context_start);
 	}
 	else if(strcmp(cmd, "reload") == 0){
-		printf("Reloading corosync at %s", addr);
+		printf("Reloading corosync at %s\n", addr);
 		restart_corosync(addr);
 	}
 	
@@ -157,7 +159,7 @@ void client_change_votes(uint32_t nodeid, uint32_t votes)
 {
 	int err;
 	
-	err = set_votes(nodeid, votes);
+	err = set_votes_and_adjust(nodeid, (unsigned int)votes);
 	if(err != CS_OK){
 		printf("failed to update node %u votes: %s\n", nodeid, get_error(err));
 	}

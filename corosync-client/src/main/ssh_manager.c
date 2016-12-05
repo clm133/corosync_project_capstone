@@ -308,7 +308,7 @@ int kill_conn(char *addr, long *cmd_start)
 	}
 	//execute command
 	/////get time right before sending request
-	get_millitime(cmd_start);
+	//get_millitime(cmd_start);
 	///////
     rc = ssh_channel_request_exec(channel, "ifdown eth1");
     if(rc != SSH_OK){
@@ -372,7 +372,7 @@ int start_conn(char *addr, long *cmd_start)
 	}
 	//execute command
 	/////get time right before sending request
-	get_millitime(cmd_start);
+	//get_millitime(cmd_start);
 	///////
     rc = ssh_channel_request_exec(channel, "ifup eth1");
     if(rc != SSH_OK){
