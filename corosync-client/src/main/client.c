@@ -29,14 +29,27 @@ enum client_task{
 	timed_option,
 	monitor_option,
 	eligibility_option,
-	ssh_cmd
+	ssh_cmd,
+	udpu_option,
 } task;
 
 
 const char *argp_program_bug_address = "charliemietzner@gmail.com";
 const char *argp_program_version = "version 12.1.16";
 
-static int timed;
+enum client_task timed;
+enum client_task udpu_mode;
+
+void check_for_transport_type()
+{
+	int err;
+	cmap_value_types_t type;
+	
+	err = get_cmap_value("totem.transport", NULL, &type);
+	if(err != CS_ERR_NOT_EXIST){ //if we found it
+		udpu_mode = udpu_option;
+	}
+}
 
 void client_ssh_command(char *cmd, char *addr, char *src_file_name)
 {
@@ -50,8 +63,13 @@ void client_ssh_command(char *cmd, char *addr, char *src_file_name)
 	if(strcmp(cmd, "start") == 0){
 		nc.change = CLUSTER_JOINED;
 		strncpy(nc.target_name,addr,32);
-		monitor_single_dispatch(&nc);
-		err = start_corosync_timed(addr, &nc.context_start);
+		if(timed == timed_option){
+			monitor_single_dispatch(&nc);
+			err = start_corosync_timed(addr, &nc.context_start);
+		}
+		else{
+			err = start_corosync(addr);
+		}
 		if(err != CS_OK){
 			printf("Failed to start corosync at node %s\n", addr);
 		}
@@ -61,15 +79,20 @@ void client_ssh_command(char *cmd, char *addr, char *src_file_name)
 	else if(strcmp(cmd, "stop") == 0){
 		nc.change = CLUSTER_LEFT;
 		strncpy(nc.target_name,addr,32);
-		monitor_single_dispatch(&nc);
-		err = stop_corosync_timed(addr, &nc.context_start);
+		if(timed == timed_option){
+			monitor_single_dispatch(&nc);
+			err = stop_corosync_timed(addr, &nc.context_start);
+		}
+		else{
+			err = stop_corosync(addr);
+		}
 		if(err != CS_OK){
 			printf("Failed to stop corosync at node %s\n", addr);
 		}
 		//printf("corosync stopped on node %s ( command sent at %lu )\n", addr, cmd_start);
 	}
 	// Reset to default conf file
-	else if(strcmp(cmd, "reset") == 0){
+	else if(strcmp(cmd, "reset_conf") == 0){
 		memset(src_file, sizeof(src_file), '\0');
 		strcpy(src_file, "../conf_templates/");
 		strcat(src_file, src_file_name);
@@ -84,6 +107,19 @@ void client_ssh_command(char *cmd, char *addr, char *src_file_name)
 		}
 		printf("corosync.conf reset to %s at node %s\n", src_file_name, addr);
 	}
+	else if(strcmp(cmd, "kill_conn") == 0){
+		printf("killing connection at %s", addr);
+		err = kill_conn(addr, &nc.context_start);
+	}
+	else if(strcmp(cmd, "start_conn") == 0){
+		printf("starting connection at %s", addr);
+		err = start_conn(addr, &nc.context_start);
+	}
+	else if(strcmp(cmd, "reload") == 0){
+		printf("Reloading corosync at %s", addr);
+		restart_corosync(addr);
+	}
+	
 	// Unrecognized command
 	else{
 		printf("Command %s not recognized.\n", cmd);
@@ -101,7 +137,7 @@ void client_add_node(char *addr)
 /* Removes a node at a given ip address */
 void client_remove_node(char *addr)
 {
-	printf("Node at %s successfully removed!\n", addr);
+	client_ssh_command("stop", addr, NULL);
 }
 
 /* client_add_epsilon() */
@@ -127,18 +163,20 @@ void client_change_votes(uint32_t nodeid, uint32_t votes)
 	}
 	//success
 	printf("node %u had their quorum_votes changed to %u\n", nodeid, votes);
+
 }
 
 void client_set_expected_votes(uint32_t votes)
 {
 	int err;
-	
-	err = set_expected_votes(votes);
+
+	err = set_expected_votes((unsigned int)votes);
 	if(err != CS_OK){
 		printf("failed to set expected votes: %s\n",get_error(err));
 	}
 	//success
 	printf("the total expected votes was set to to %u\n", votes);
+	
 }
 
 void client_change_eligibility(char *mode, uint32_t *id1) 
@@ -152,7 +190,10 @@ void client_change_eligibility(char *mode, uint32_t *id1)
 			printf("there was an error marking node eligible - error: %s\n", get_error(err));
 			return;
 		}
+		//success
+		printf("node %u has been made inelligble\n", *(uint32_t *)id1);
 	}
+	
 	// mark ineligible
 	else if(strcmp(mode, "mark_ineligible") == 0) {
 		err = mark_ineligible(*id1);
@@ -160,62 +201,11 @@ void client_change_eligibility(char *mode, uint32_t *id1)
 			printf("there was an error marking node ineligible - error: %s\n", get_error(err));
 			return;
 		}
+		//success
+		printf("node %u has been made inelligble\n", *(uint32_t *)id1);
 	}
 }
 
-/*
-void client_ssh_command(char *cmd, char *addr, char *src_file_name)
-{
-	int err;
-	char src_file[128];
-	char *dest_file;
-	long cmd_start;
-	Notify_Context nc;
-		
-	//start corosync
-	if(strcmp(cmd, "start") == 0){
-		nc.change = CLUSTER_JOINED;
-		strncpy(nc.target_name,addr,32);
-		monitor_single_dispatch(&nc);
-		err = start_corosync_timed(addr, &nc.context_start);
-		if(err != CS_OK){
-			printf("Failed to start corosync at node %s\n", addr);
-		}
-		//printf("corosync started on node %s ( command sent at %lu )\n", addr, cmd_start);
-	}
-	// Stop corosync
-	else if(strcmp(cmd, "stop") == 0){
-		nc.change = CLUSTER_LEFT;
-		strncpy(nc.target_name,addr,32);
-		monitor_single_dispatch(&nc);
-		err = stop_corosync_timed(addr, &nc.context_start);
-		if(err != CS_OK){
-			printf("Failed to stop corosync at node %s\n", addr);
-		}
-		//printf("corosync stopped on node %s ( command sent at %lu )\n", addr, cmd_start);
-	}
-	// Reset to default conf file
-	else if(strcmp(cmd, "reset") == 0){
-		memset(src_file, sizeof(src_file), '\0');
-		strcpy(src_file, "../conf_templates/");
-		strcat(src_file, src_file_name);
-		dest_file = "/etc/corosync/corosync.conf";
-		err = copy_conf(addr, src_file, dest_file);
-		if(err != CS_OK){
-			printf("Failed to reset corosync.conf to default at node %s - error: %s\n", addr, get_error(err));
-		}
-		err = stop_corosync(addr);
-		if(err != CS_OK){
-			printf("May have reset corosync.conf to default at node %s, but something went wrong restarting corosync... - error: %s\n", addr, get_error(err));
-		}
-		printf("corosync.conf reset to %s at node %s\n", src_file_name, addr);
-	}
-	// Unrecognized command
-	else{
-		printf("Command %s not recognized.\n", cmd);
-	}
-}
-*/
 void client_monitor_option(struct arguments *arguments)
 {
 	int err;
@@ -279,18 +269,21 @@ void client_quorum_option(struct arguments *arguments)
 			votes = atoi(q_target);
 			//call client_change_vote
 			client_change_votes(nodeid, votes);
-		}
-		//change expected_votes
-		else if(strcmp(q_option, "set_expected") == 0){
-			//get node id
-			nodeid = (uint32_t)atoi(q_target);
-			//get votes
-			q_target = argz_next(arguments->argz, arguments->argz_len, q_target);
-			votes = atoi(q_target);
-			//call client_set_expected_vote
-			client_set_expected_votes(votes);
 			break;
 		}
+		
+		//change expected votes
+		else if(strcmp(q_option, "set_expected") == 0){
+			//get node id
+			//get votes
+			q_target = argz_next(arguments->argz, arguments->argz_len, q_target);
+			q_target = argz_next(arguments->argz, arguments->argz_len, q_target);
+			votes = atoi(q_target);
+			//call client_change_vote
+			client_set_expected_votes(votes);
+			break;
+		} 
+		
 		prev = q_target;
 	}
 }
@@ -360,9 +353,7 @@ void client_remove_option(struct arguments *arguments)
 	char *remove_target;
 	const char *prev;
 	char *addr;
-	struct timespec half_sec;
-
-	half_sec.tv_nsec = 500000000;
+	
 	prev = NULL;
 	remove_target = argz_next(arguments->argz, arguments->argz_len, prev);
 	prev = remove_target;
@@ -377,7 +368,6 @@ void client_remove_option(struct arguments *arguments)
 		else{
 			break;
 		}
-		nanosleep(&half_sec, NULL); //updating conf files and restarting corosync takes some time, so we sleep between executions
 		prev = addr;
 	}
 	
@@ -395,10 +385,11 @@ void client_ssh_option(struct arguments *arguments)
 	prev = NULL;
 	src_file_name = NULL;
 	cmd = argz_next(arguments->argz, arguments->argz_len, prev);
-	if(strcmp(cmd, "reset") == 0){
+	if(strcmp(cmd, "reset_conf") == 0){
 		src_file_name = argz_next(arguments->argz, arguments->argz_len, cmd);
 		prev = src_file_name;
 	}
+
 	else{
 		prev = cmd;
 	}
@@ -421,6 +412,11 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 	case 'a':
 		task = add_option;
 		argz_add(&a->argz, &a->argz_len, arg);
+		break;
+	
+	//timed option (must preced any other option)
+	case 't':
+		timed = timed_option;
 		break;
 	
 	//eligibility_option
@@ -464,11 +460,6 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		task = quorum_option;
 		argz_add(&a->argz, &a->argz_len, arg);
 		break;
-	
-	//timed option
-	case 't':
-		timed = 1;
-		break;
 			
 	//argp stuff
 	case ARGP_KEY_ARG:
@@ -505,9 +496,11 @@ int main(int argc, char **argv)
 		{"print", 'p', "<corosync-item>", 0, "prints the status of corosync target item"},
 		{"monitor", 'm',"<nothing>", 0, "begins monitoring locally"},
 		{"quorum", 'q', "<quorum-setting>", 0, "changes a quorum setting"},
+		{"timed", 't', "<nothing>", 0, "preceed other instructions with -t to time the operation"},
 		{"eligibility", 'e', "<eligiblity-setting>", 0, "changes a eligibity setting"},
 		{0}
 	};
+	
 	struct argp argp = {options, parse_opt, 0, 0, 0, 0, 0};
 	struct arguments arguments;
 	timed = -1;
@@ -553,5 +546,8 @@ int main(int argc, char **argv)
 		}
 		free(arguments.argz);
 	}
-	printf("\n");
+	if(timed == timed_option){
+		printf("Time of client command: ");
+		print_time();
+	}
 }

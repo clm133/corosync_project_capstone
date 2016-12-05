@@ -5,7 +5,6 @@ int get_quorum_info(Quorum_Details *qd)
 	int err;
 	unsigned int id;
 	votequorum_handle_t vq_h;
-	quorum_handle_t q_h;
 	struct votequorum_info info;
 	
 	//initialize handle
@@ -27,6 +26,40 @@ int get_quorum_info(Quorum_Details *qd)
 	qd->quorate = info.flags & VOTEQUORUM_INFO_QUORATE;
 	//finalize handle
 	votequorum_finalize(vq_h);
+	return CS_OK;
+}
+
+int get_votequorum_info(struct votequorum_info *vqi, unsigned int id)
+{
+	int err;
+	votequorum_handle_t vq_h;
+	
+	//initialize handle
+	err = votequorum_initialize(&vq_h, NULL);
+	if(err != CS_OK){
+		return err;
+	}
+	err = votequorum_getinfo(vq_h, id, vqi);
+	if(err != CS_OK){
+		votequorum_finalize(vq_h);
+		return err;
+	}
+	//finalize handle
+	votequorum_finalize(vq_h);
+	return CS_OK;
+	
+}
+
+int get_node_total(int *total)
+{
+	int err;
+	unsigned int id;
+	Notify_Context nc;
+	
+	nc.change = QUERY;
+	err = query_status(&nc);
+	*total = nc.total_nodes;
+	
 	return CS_OK;
 }
 
@@ -121,7 +154,7 @@ int get_votes(uint32_t nodeid, unsigned int *votes)
 	return CS_OK;
 }
 
-int set_votes(uint32_t nodeid, unsigned int votes)
+int set_votes_and_adjust(uint32_t nodeid, unsigned int votes)
 {
 	int err;
 	unsigned int cur_votes;
@@ -167,11 +200,42 @@ int set_votes(uint32_t nodeid, unsigned int votes)
 	return CS_OK;
 }
 
+int set_votes(uint32_t nodeid, unsigned int votes)
+{
+	int err;
+	unsigned int cur_votes;
+	unsigned int expected_votes;
+	int delta;
+	votequorum_handle_t vq_h;
+	quorum_handle_t q_h;
+	
+	//initialize handle
+	err = votequorum_initialize(&vq_h, NULL);
+	if(err != CS_OK){
+		return err;
+	}
+	//set the votes
+	err=votequorum_setvotes(vq_h, nodeid, votes);
+	if(err != CS_OK){
+		votequorum_finalize(vq_h);
+		return err;
+	}
+	//success
+	//finalize handle
+	votequorum_finalize(vq_h);
+	return CS_OK;
+}
+
 int mark_eligible(uint32_t e_id)
 {
 	int err;
+	int votes;
 	
-	err = set_votes(e_id, 2);
+	err = get_votes(e_id, &votes);
+	if(err != CS_OK){
+		return err;
+	}
+	err = set_votes_and_adjust(e_id, 2);
 	if(err != CS_OK){
 		return err;
 	}
@@ -183,7 +247,7 @@ int mark_ineligible(uint32_t e_id)
 {
 	int err;
 	
-	err = set_votes(e_id, 0);
+	err = set_votes_and_adjust(e_id, 0);
 	if(err != CS_OK){
 		return err;
 	}

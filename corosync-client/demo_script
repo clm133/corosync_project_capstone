@@ -1,0 +1,7 @@
+1. start corosync / add node
+2. print membership / quorum
+3. monitor mode
+4. stop corosync / remove node
+5. timed add / remove node
+6. mark elligible / mark inelligible
+

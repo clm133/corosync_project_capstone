@@ -1,4 +1,5 @@
-start master: ptpd -W -b <network-interface-name>
+start master: ptpd -W -b <network-interface-name> //without NTP
+start master: ptpd -G -b <network interface name> //with NTP
 start slave: ptpd -g -b <network-interface-name>
 
 

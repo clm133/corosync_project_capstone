@@ -24,6 +24,10 @@ int stop_corosync(char *addr);
 int start_corosync_timed(char *addr, long *cmd_start);
 //same as the normal stop command, but records the time right before command is sent
 int stop_corosync_timed(char *addr, long *cmd_start);
+//shuts down eth1 at addr (must use 12.0.0.X addr)
+int kill_conn(char *addr, long *cmd_start);
+//brings up eth1 at addr (must use 12.0.0.X addr)
+int start_conn(char *addr, long *cmd_start);
 // just a call to stop_corosync() and then start_corosync()
 int restart_corosync(char *addr);
 

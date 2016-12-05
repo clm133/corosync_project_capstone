@@ -69,7 +69,7 @@ static void votequorum_notification_fn(
 	uint32_t node_list_entries,
 	uint32_t node_list[])
 {
-	get_microtime(&n_time_received);
+	get_millitime(&n_time_received);
 	n_context->context_end = n_time_received;
 	g_ring_id_rep_node = ring_id.nodeid;
 	g_vq_called = 1;
@@ -87,6 +87,7 @@ static void quorum_notification_fn(
 	g_called = 1;
 	g_quorate = quorate;
 	g_ring_id = ring_id;
+	n_context->total_nodes = view_list_entries;
 	g_view_list_entries = view_list_entries;
 	if (g_view_list) {
 		free(g_view_list);
@@ -211,6 +212,21 @@ static void close_all(void) {
 	}
 }
 
+int print_loop()
+{
+	int i;
+	unsigned int votes;
+	
+	printf("\nMembership information\n");
+	printf("----------------------\n");
+	for(i = 0; i < g_view_list_entries; i++){
+		printf("Node %u\t", g_view_list[i].node_id);
+		get_votes(g_view_list[i].node_id, &votes);
+		printf("votes: %u\n", votes);
+	}
+	return CS_OK;
+}
+
 static int loop()
 {
 	int err;
@@ -244,12 +260,38 @@ static int loop()
 		if(err != CS_OK){
 			return err;
 		}
-		err = print_membership();
-		if(err != CS_OK){
-			return err;
-		}
-		printf("\nloop %d\n", i);
+		print_membership();
 	}
+}
+
+static int single_dispatch_silent()
+{
+	int err;
+	
+	if (q_type == QUORUM_FREE) {
+		printf("\nQuorum is not configured - cannot monitor\n");
+		return -1;
+	}
+
+	err=quorum_trackstart(q_handle, CS_TRACK_CHANGES);
+	if (err != CS_OK) {
+		fprintf(stderr, "Unable to start quorum status tracking: %s\n", cs_strerror(err));
+		return -1;
+	}
+
+	if (using_votequorum()) {
+		if ( (err=votequorum_trackstart(v_handle, 0LL, CS_TRACK_CHANGES)) != CS_OK) {
+			fprintf(stderr, "Unable to start votequorum status tracking: %s\n", cs_strerror(err));
+			return -1;
+		}
+	}
+	err = quorum_dispatch(q_handle, CS_DISPATCH_ONE);
+	if (err != CS_OK) {
+		fprintf(stderr, "Unable to dispatch quorum status: %s\n", cs_strerror(err));
+		return -1;
+	}
+	
+	return CS_OK;
 }
 
 static int single_dispatch()
@@ -280,6 +322,35 @@ static int single_dispatch()
 	}
 	
 	print_notification(n_context);
+}
+
+int monitor_print_membership(Notify_Context *nc)
+{
+	int err;
+	int i;
+	
+	if (init_all()) {
+		close_all();
+		return -1;
+	}
+	n_context = nc;
+	err = single_dispatch_silent();
+	print_loop();
+	close_all();
+	return CS_OK;
+}
+
+int query_status(Notify_Context *nc)
+{
+	int err;
+	if (init_all()) {
+		close_all();
+		return -1;
+	}
+	n_context = nc;
+	err = single_dispatch_silent();
+	close_all();
+	return CS_OK;
 }
 
 int monitor_single_dispatch(Notify_Context *nc)
