@@ -1,0 +1,15 @@
+start master: ptpd -W -b <network-interface-name> //without NTP
+start master: ptpd -G -b <network interface name> //with NTP
+start slave: ptpd -g -b <network-interface-name>
+
+
+start master and run in foreground: ptpd -W -b <network-interface-name> -C
+start slave and run in forground: ptpd -g -b <network-interface-name> -C
+
+
+//checking margin of err
+ assume your PTP master is also running NTPD. Then, on your client, 
+ you can use "ntpdate -q <master>" to see the offset. You should see something like this:
+ $ ntpdate -q 192.168.1.1
+server 192.168.1.1, stratum 4, offset -0.000018, delay 0.02565
+28 Jan 08:05:35 ntpdate[10394]: adjust time server 192.168.1.1 offset -0.000018 sec

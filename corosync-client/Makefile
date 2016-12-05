@@ -3,7 +3,7 @@ CC = gcc
 ## Includes
 INC = -Iinc -Iinc/corosync -Iinc/libqb -Iinc/libqb/qb -Iinc/corosync/totem -Iinc/libssh -Iinc/minunit
 ## Libraries
-STATLIBS = lib/libcmap.a lib/libcorosync_common.a lib/libqb.a lib/libcfg.a /usr/lib/x86_64-linux-gnu/libssh.so
+STATLIBS = lib/libcmap.a lib/libcorosync_common.a lib/libqb.a lib/libcfg.a /usr/lib/x86_64-linux-gnu/libssh.so lib/libvotequorum.a lib/libquorum.a
 GLIBS = -lpthread -ldl
 ## Directories
 IDIR = inc
@@ -12,9 +12,9 @@ TDIR = src/tests
 BDIR = bin
 ODIR = obj
 ## Executables
-OUT = $(BDIR)/corosync-client
+OUT = $(BDIR)/ctc
 
-_OBJS = client.o cluster_manager.o quorum_manager.o ssh_manager.o sftp_manager.o conf_manager.o client_cmapctl.o cs_errors.o client_errors.o
+_OBJS = client.o cluster_manager.o quorum_manager.o print_manager.o ssh_manager.o monitor.o time_manager.o sftp_manager.o client_cmapctl.o client_errors.o
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 
 $(ODIR)/%.o: $(SDIR)/%.c build
@@ -36,7 +36,6 @@ testrun:
 
 .PHONY: clean
 
-	
 clean:
 	rm -rf bin obj
 	find . -name "*~" -exec rm {} \;

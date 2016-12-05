@@ -6,6 +6,8 @@
 #include <poll.h>
 #include <corosync/corotypes.h>
 #include <corosync/cmap.h>
+#include <corosync/cfg.h>
+#include <corosync/totem/totem.h>
 
 #include "client_errors.h"
 
@@ -28,22 +30,30 @@ typedef enum {
     CMAP_VALUETYPE_STRING	= 11
 } cmap_value_types_t; 				*/
 
-int client_set_cmap_value(const char *key_name, void *value, cmap_value_types_t type);
+typedef struct Cluster_Member {
+	int nodeid;
+	char ip[INET6_ADDRSTRLEN]; //at most will be the length of an ipv6 addr
+	char status[32]; //should not be more than 32 characters
+} Cluster_Member ;
 
-int client_get_cmap_value(const char *key_name, void *value, cmap_value_types_t type);
+/*type paremeter MUST have a correct type. see the enum above*/
+int set_cmap_value(const char *key_name, void *value, cmap_value_types_t type);
 
-int client_get_cmap_string_value(const char *key_name, char **value);
+/*value can be passed NULL, in which case, this function will return with a cmap_value_types_t type parameter set to the key's type */
+int get_cmap_value(const char *key_name, void *value, cmap_value_types_t *type);
 
-int client_delete_cmap_value(const char *key_name, void *value, cmap_value_types_t type);
+/*if this function is passed a value parameter, it will be set to the value being deleted. 
+/*Otherwise, this can just be passed NULL, in which case, this function will return with a cmap_value_types_t type parameter set to the key's type */
+int delete_cmap_value(const char *key_name, void *value, cmap_value_types_t *type);
 
-int client_delete_cmap_string_value(const char *key_name, char **value);
+int get_member_count(int *count);
 
-int client_get_cmap_key_type(const char *key_name, cmap_value_types_t *type, size_t *len);
+int get_members(Cluster_Member **member_array, int array_len);
 
-int nodelist_get_total(int *total);
+/* generates a key with prefix "nodelist.node.X."*/
+int generate_nodelist_key(char *key_buffer, uint32_t id, char *key_suffix);
 
-int nodelist_get_id_array(unsigned int **list);
-
-int nodelist_get_addr_array(char **list);
+/*  generates a key with prefix "runtime.totem.pg.mrp.srp.members."*/
+int generate_members_key(char *key_buffer, uint32_t id, char *key_suffix);
 
 #endif /* CMAPCTL_H */

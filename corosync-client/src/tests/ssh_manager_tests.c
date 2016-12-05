@@ -26,6 +26,9 @@ MU_TEST(stop_corosync_tests)
 	printf("stop_corosync() test #1\n");
 	//ssh corosync stop to local address: 127.0.0.1
 	err = stop_corosync(local_addr);
+	if(err != CS_OK){
+		printf("stop_corosync returned an error: %s\n", get_error(err));
+	}
 	mu_check(err == CS_OK);
 	printf("stop_corosync() test #1 success!\n");
 	
@@ -45,6 +48,9 @@ MU_TEST(start_corosync_tests)
 	printf("start_corosync() test #1\n");
 	//ssh corosync start to local address: 127.0.0.0
 	err = start_corosync(local_addr);
+	if(err != CS_OK){
+		printf("stop_corosync returned an error: %s\n", get_error(err));
+	}
 	mu_check(err == CS_OK);
 	printf("start_corosync() test #1 success!\n");
 	

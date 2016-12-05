@@ -4,13 +4,16 @@
 #include <unistd.h>
 #include <argp.h>
 #include <argz.h>
+#include <corosync/quorum.h>
+#include <time.h>
 #include "client_errors.h"
 #include "client_cmapctl.h"
-#include "cluster_manager.h"
-#include "conf_manager.h"
 #include "ssh_manager.h"
 #include "sftp_manager.h"
+#include "print_manager.h"
+#include "monitor.h"
 #include "quorum_manager.h"
+#include "cluster_manager.h"
 
 struct arguments{
 	char *argz;
@@ -18,371 +21,50 @@ struct arguments{
 };
 
 enum client_task{
-	add_option,
-	remove_option,
 	print_option,
 	quorum_option,
-	eligibility_option,
-	ssh_cmd
+	monitor_option,
+	ssh_cmd,
 } task;
 
 
 const char *argp_program_bug_address = "charliemietzner@gmail.com";
-const char *argp_program_version = "version 10.31.16";
+const char *argp_program_version = "version 12.1.16";
 
-
-/* client_add_node() */
-/* Adds a node at a given ip address */
-void client_add_node(char *addr)
-{	
-	int err;
-	char *src_file;
-	char *dest_file;
-	int total;
-	char **nodelist;
-
-	src_file = "corosync_client.conf";
-	dest_file = "/etc/corosync/corosync.conf";
-	// add node to cmap
-	err = add_node(addr);
-	if(err != CS_OK){
-		printf("There were problems adding node at %s - error: %s\n", addr, get_error(err));
-		return;
-	}
-	//generate conf file
-	printf("node at %s was added to the cmap...generating conf...\n", addr);
-	err = write_conf(src_file);
-	if(err != CS_OK){
-		printf("There were problems generating conf - error: %s\n", get_error(err));
-		return;
-	}
-	//sftp conf file to all nodes
-	printf("conf successfuly generated... attempting to update all cluster nodes...\n");
-	err = nodelist_get_total(&total);
-	if(err != CS_OK){
-		printf("There were problems updating cluster nodes - error: %s\n", get_error(err));
-		return;
-	}
-	//before updating all nodes, we need to get a list of those remaining
-	nodelist = malloc(sizeof(char *) * total);
-	err = nodelist_get_addr_array(nodelist);
-	if(err != CS_OK){
-		printf("There were problems updating cluster nodes - error: %s\n", get_error(err));
-		free(nodelist);
-		return;
-	}
-	//now we can update all!
-	err = update_all(nodelist, total, src_file, dest_file);
-	//free up our malloc
-	while(total > 0){
-		free(nodelist[total - 1]);
-		total--;
-	}
-	free(nodelist);
-	if(err != CS_OK){
-		printf("There were problems updating cluster nodes - error: %s\n", get_error(err));
-		return;
-	}
-	printf("all nodes in cluster successfully updated\n");
-	//success!
-	printf("Node at %s successfully added!\n", addr);
-}
-
-/* client_remove_node() */
-/* Removes a node at a given ip address */
-void client_remove_node(char *addr)
+/*client_ssh_command*/
+//processes several different kinds of instructions:
+//start:	"./ctc -c start <ip-address-of-where-you-want-to-start-node>
+//stop:	 	"./ctc -c stop <ip address of where you want to stop a node>" (note this is a graceful stop for corosync)
+//kill_conn:	"./ctc -c kill_conn <ip-addr of a node you want to bring down>" (note this is a NOT a graceful stop)
+//reset_conf:	"./ctc -c reset_conf <name of a conf file in the conf_templates folder> <ip address of node you want to set conf at>"
+void client_ssh_command(char *cmd, char *addr, char *src_file_name)
 {
 	int err;
-	char *src_file;
+	char src_file[128];
 	char *dest_file;
-	int total;
-	char **nodelist;
-
-	src_file = "../conf_templates/default.conf";
-	dest_file = "/etc/corosync/corosync.conf";
-	// remove node from cmap
-	err = delete_node(addr);
-	if(err != CS_OK){
-		printf("There were problems deleting node at %s from cmap- error: %s\n", addr, get_error(err));
-		return;
-	}
-	// reset and turn off deleted node
-	err = copy_conf(addr, src_file, dest_file);
-	if(err != CS_OK){
-		printf("There may have been problems reseting removed node at %s- error: %s\n", addr, get_error(err));
-	}
-	err = stop_corosync(addr);
-	if(err != CS_OK){
-		printf("There may have been problems stopping node at %s- error: %s\n", addr, get_error(err));
-	}
-	//generate new conf file
-	src_file = "corosync_client.conf";
-	printf("node at %s was deleted from the cmap...generating new conf...\n", addr);
-	err = write_conf(src_file);
-	if(err != CS_OK){
-		printf("There were problems generating conf - error: %s\n", get_error(err));
-		return;
-	}
-	//sftp conf file to all nodes
-	printf("conf successfuly generated... attempting to update remaining cluster nodes...\n");
-	err = nodelist_get_total(&total);
-	if(err != CS_OK){
-		printf("There were problems updating cluster nodes - error: %s\n", get_error(err));
-		return;
-	}
-	//before updating all nodes, we need to get a list of those remaining
-	nodelist = malloc(sizeof(char *) * total);
-	err = nodelist_get_addr_array(nodelist);
-	if(err != CS_OK){
-		printf("There were problems updating cluster nodes - error: %s\n", get_error(err));
-		free(nodelist);
-		return;
-	}
-	//now we can update all!
-	err = update_all(nodelist, total, src_file, dest_file);
-	//free up our malloc
-	while(total > 0){
-		free(nodelist[total - 1]);
-		total--;
-	}
-	free(nodelist);
-	if(err != CS_OK){
-		printf("There were problems updating cluster nodes - error: %s\n", get_error(err));
-		return;
-	}
-	printf("all nodes in cluster successfully updated\n");
-	//success!
-	printf("Node at %s successfully removed!\n", addr);
-}
-
-/* client_change_epsilon() */
-void client_change_epsilon(char *mode, uint32_t *id1, uint32_t *id2)
-{
-	int err;
-	int total;
-	char **nodelist;
-	char *src_file;
-	char *dest_file;
-	
-	src_file = "corosync_client.conf";
-	dest_file = "/etc/corosync/corosync.conf";
-	// set epsilon
-	if(strcmp(mode, "set_epsilon") == 0){
-		err = set_epsilon(*id1, 0);
-		if(err != CS_OK){
-			printf("there was an error setting epsilon - error: %s\n", get_error(err));
-			return;
-		}
-	}
-	// remove_epsilon
-	else if(strcmp(mode, "remove_epsilon") == 0){
-		err = remove_epsilon(*id1);
-		if(err != CS_OK){
-			printf("there was an error removing epsilon - error: %s\n", get_error(err));
-			return;
-		}
-	}
-	// move epsilon
-	else if(strcmp(mode, "move_epsilon") == 0){
-		err = move_epsilon(*id1, *id2);
-		if(err != CS_OK){
-			printf("there was an error moving epsilon - error: %s\n", get_error(err));
-			return;
-		}
-	}
-	//generate conf file
-	err = write_conf(src_file);
-	if(err != CS_OK){
-		printf("There were problems generating conf - error: %s\n", get_error(err));
-		return;
-	}
-	//sftp conf file to all nodes
-	printf("conf successfuly generated... attempting to update all cluster nodes...\n");
-	err = nodelist_get_total(&total);
-	if(err != CS_OK){
-		printf("There were problems updating cluster nodes - error: %s\n", get_error(err));
-		return;
-	}
-	//before updating all nodes, we need to get a list of those remaining
-	nodelist = malloc(sizeof(char *) * total);
-	err = nodelist_get_addr_array(nodelist);
-	if(err != CS_OK){
-		printf("There were problems updating cluster nodes - error: %s\n", get_error(err));
-		free(nodelist);
-		return;
-	}
-	//now we can update all!
-	err = update_all(nodelist, total, src_file, dest_file);
-	//free up our malloc
-	while(total > 0){
-		free(nodelist[total - 1]);
-		total--;
-	}
-	free(nodelist);
-	if(err != CS_OK){
-		printf("There were problems updating cluster nodes - error: %s\n", get_error(err));
-		return;
-	}
-	printf("all nodes in cluster successfully updated\n");
-	//success
-	printf("epsilon changed successfully\n");
-}
-
-/* client_change_votes() */
-void client_change_votes(char *addr, uint32_t votes)
-{
-	int err;
-	uint32_t id;
-	int total;
-	char **nodelist;
-	char *src_file;
-	char *dest_file;
-	
-	src_file = "corosync_client.conf";
-	dest_file = "/etc/corosync/corosync.conf";
-	err = nodelist_get_total(&total);
-	if(err != CS_OK){
-		printf("something went wrong accessing nodelist - error: %s\n", get_error(err));
-		return;
-	}
-	err = get_id_from_addr(total, &id, addr);
-	if(err != CS_OK){
-		printf("something went wrong accessing nodelist - error: %s\n", get_error(err));
-		return;
-	}
-	err = set_node_votes(id, votes);
-	if(err != CS_OK){
-		printf("something went wrong setting votes - error: %s\n", get_error(err));
-		return;
-	}
-	//generate conf file
-	printf("quorum votes at %s were changed to %u in the cmap...generating conf...\n", addr, votes);
-	err = write_conf(src_file);
-	if(err != CS_OK){
-		printf("There were problems generating conf - error: %s\n", get_error(err));
-		return;
-	}
-	//sftp conf file to all nodes
-	printf("conf successfuly generated... attempting to update all cluster nodes...\n");
-	err = nodelist_get_total(&total);
-	if(err != CS_OK){
-		printf("There were problems updating cluster nodes - error: %s\n", get_error(err));
-		return;
-	}
-	//before updating all nodes, we need to get a list of those remaining
-	nodelist = malloc(sizeof(char *) * total);
-	err = nodelist_get_addr_array(nodelist);
-	if(err != CS_OK){
-		printf("There were problems updating cluster nodes - error: %s\n", get_error(err));
-		free(nodelist);
-		return;
-	}
-	//now we can update all!
-	err = update_all(nodelist, total, src_file, dest_file);
-	//free up our malloc
-	while(total > 0){
-		free(nodelist[total - 1]);
-		total--;
-	}
-	free(nodelist);
-	if(err != CS_OK){
-		printf("There were problems updating cluster nodes - error: %s\n", get_error(err));
-		return;
-	}
-	printf("all nodes in cluster successfully updated\n");
-	//success
-	printf("node at %s had their quorum_votes changed to %u\n", addr, votes);
-}
-
-void client_change_eligibility(char *mode, uint32_t *id1) 
-{
-	int err;
-	int total;
-	char **nodelist;
-	char *src_file;
-	char *dest_file;
-	
-	src_file = "corosync_client.conf";
-	dest_file = "/etc/corosync/corosync.conf";
-	// mark eligible
-	if(strcmp(mode, "mark_eligible") == 0){
-		err = mark_eligible(*id1);
-		if(err != CS_OK){
-			printf("there was an error marking node eligible - error: %s\n", get_error(err));
-			return;
-		}
-	}
-	// mark ineligible
-	else if(strcmp(mode, "mark_ineligible") == 0) {
-		err = mark_ineligible(*id1);
-		if(err != CS_OK){
-			printf("there was an error marking node ineligible - error: %s\n", get_error(err));
-			return;
-		}
-	}
-	//generate conf file
-	err = write_conf(src_file);
-	if(err != CS_OK){
-		printf("There were problems generating conf - error: %s\n", get_error(err));
-		return;
-	}
-	//sftp conf file to all nodes
-	printf("conf successfuly generated... attempting to update all cluster nodes...\n");
-	err = nodelist_get_total(&total);
-	if(err != CS_OK){
-		printf("There were problems updating cluster nodes - error: %s\n", get_error(err));
-		return;
-	}
-	//before updating all nodes, we need to get a list of those remaining
-	nodelist = malloc(sizeof(char *) * total);
-	err = nodelist_get_addr_array(nodelist);
-	if(err != CS_OK){
-		printf("There were problems updating cluster nodes - error: %s\n", get_error(err));
-		free(nodelist);
-		return;
-	}
-	//now we can update all!
-	err = update_all(nodelist, total, src_file, dest_file);
-	//free up our malloc
-	while(total > 0){
-		free(nodelist[total - 1]);
-		total--;
-	}
-	free(nodelist);
-	if(err != CS_OK){
-		printf("There were problems updating cluster nodes - error: %s\n", get_error(err));
-		return;
-	}
-	printf("all nodes in cluster successfully updated\n");
-	//success
-	printf("eligibity changed successfully\n");
-}
-
-void client_ssh_command(char *cmd, char *addr)
-{
-	int err;
-	char *src_file;
-	char *dest_file;
-	
+	long cmd_start;
+		
 	//start corosync
 	if(strcmp(cmd, "start") == 0){
 		err = start_corosync(addr);
+		printf("node started\n");
 		if(err != CS_OK){
 			printf("Failed to start corosync at node %s\n", addr);
 		}
-		printf("corosync started at node %s\n", addr);
 	}
 	// Stop corosync
 	else if(strcmp(cmd, "stop") == 0){
-		err = stop_corosync(addr);
+			err = stop_corosync(addr);
+			printf("node stopped\n");
 		if(err != CS_OK){
 			printf("Failed to stop corosync at node %s\n", addr);
 		}
-		printf("corosync stopped at node %s\n", addr);
 	}
-	// Reset to default conf file
-	else if(strcmp(cmd, "reset") == 0){
-		src_file = "../conf_templates/default.conf";
+	// Reset to a node to a conf file located in the conf_templates folder
+	else if(strcmp(cmd, "reset_conf") == 0){
+		memset(src_file, sizeof(src_file), '\0');
+		strcpy(src_file, "../conf_templates/");
+		strcat(src_file, src_file_name);
 		dest_file = "/etc/corosync/corosync.conf";
 		err = copy_conf(addr, src_file, dest_file);
 		if(err != CS_OK){
@@ -392,7 +74,19 @@ void client_ssh_command(char *cmd, char *addr)
 		if(err != CS_OK){
 			printf("May have reset corosync.conf to default at node %s, but something went wrong restarting corosync... - error: %s\n", addr, get_error(err));
 		}
-		printf("corosync.conf reset to default at node %s\n", addr);
+		printf("corosync.conf reset to %s at node %s\n", src_file_name, addr);
+	}
+	//kills the eth1 connection (11.0.0.X) at the specified address (note, once eth1 is down you will need to communicate to this node by its alternative interface (12.0.0.X))
+	else if(strcmp(cmd, "kill_conn") == 0){
+		printf("killing connection at %s\nTime:", addr);
+		print_time();
+		err = kill_conn(addr);
+	}
+	//starts the eth1 connection (11.0.0.X) at the specified address
+	else if(strcmp(cmd, "start_conn") == 0){
+		printf("starting connection at %s\nTime:", addr);
+		print_time();
+		err = start_conn(addr);
 	}
 	// Unrecognized command
 	else{
@@ -400,164 +94,120 @@ void client_ssh_command(char *cmd, char *addr)
 	}
 }
 
-/* the client_X_option() functions run through the list of arguments and route client instructions appropriately*/
-void client_print_option(struct arguments *arguments)
+/* client_change_votes() */
+//processes instructions of the format "./ctc -q set_votes <nodeid, votes>"
+void client_change_votes(uint32_t nodeid, uint32_t votes)
 {
+	int err;
+	
+	err = set_votes(nodeid, (unsigned int)votes);
+	if(err != CS_OK){
+		printf("failed to update node %u votes: %s\n", nodeid, get_error(err));
+	}
+	//success
+	printf("node %u had their quorum_votes changed to %u\n", nodeid, votes);
+
 }
 
+/* client_monitor_option() */
+// to monitor at a node, use the command: "./ctc -m quorum"
+void client_monitor_option(struct arguments *arguments)
+{
+	int err;
+	char *m_target;
+
+	m_target = argz_next(arguments->argz, arguments->argz_len, NULL);
+	if(strcmp(m_target, "membership") == 0){
+		err = monitor_status();
+		if(err != CS_OK){
+			printf("monitor recieved an error: %s\n", get_error(err));
+		}
+	}
+	else if(strcmp(m_target, "quorum") == 0){
+		err = monitor_status();
+		if(err != CS_OK){
+			printf("monitor recieved an error: %s\n", get_error(err));
+		}
+	}
+}
+
+/*client_print_option()*/
+// to print membership:	"./ctc -p membership"
+// to print quorum: "./ctc -p membership"
+void client_print_option(struct arguments *arguments)
+{
+	int err;
+	char *print_target;
+
+	print_target = argz_next(arguments->argz, arguments->argz_len, NULL);
+	if(strcmp(print_target, "membership") == 0){
+		err = print_membership();
+		if(err != CS_OK){
+			printf("print manager recieved an error: %s\n", get_error(err));
+		}
+	}
+	else if(strcmp(print_target, "quorum") == 0){
+		err = print_quorum();
+		if(err != CS_OK){
+			printf("print manager recieved an error: %s\n", get_error(err));
+		}
+	}
+}
+
+/*client_quorum_option*/
+//sorts through quorum option arguments and routes their input appropriately
 void client_quorum_option(struct arguments *arguments)
 {
 	int err;
-	char *q_target;
 	char *prev;
-	char *addr;
-	uint32_t id1;
-	uint32_t id2;
-	struct timespec half_sec;
-
-	half_sec.tv_nsec = 500000000;
-	prev = NULL;
-	q_target = argz_next(arguments->argz, arguments->argz_len, prev);
-	prev = q_target;
-	while(addr = argz_next(arguments->argz, arguments->argz_len, prev)){
-		// set epsilon
-		if(strcmp(q_target, "set_epsilon") == 0){
-			id1 = (uint32_t)atoi(addr);
-			client_change_epsilon(q_target, &id1, NULL);
-			break;
-		}
-		// remove epsilon
-		else if(strcmp(q_target, "remove_epsilon") == 0){
-			id1 = (uint32_t)atoi(addr);
-			client_change_epsilon(q_target, &id1, NULL);
-			break;
-		}
-		// move epsilon
-		else if(strcmp(q_target, "move_epsilon") == 0){
-			id1 = (uint32_t)atoi(addr);
-			prev = addr;
-			addr = argz_next(arguments->argz, arguments->argz_len, prev);
-			id2 = (uint32_t)atoi(addr);
-			client_change_epsilon(q_target, &id1, &id2);
-			break;
-		}
-		// change votes
-		else if(strcmp(q_target, "set_votes") == 0){
-			prev = addr;
-			addr = argz_next(arguments->argz, arguments->argz_len, prev);
-			id1 = (uint32_t)atoi(addr);//votes
-			client_change_votes(prev, id1);
-			prev = addr;
-		}
-		// unknown q_target 
-		else{
-			break;
-		}
-		
-		prev = addr;
-		nanosleep(&half_sec, NULL); //updating conf files and restarting corosync takes some time, so we sleep between executions
-	}
-}
-
-void client_add_option(struct arguments *arguments)
-{
-	int err;
-	char *add_target;
-	const char *prev;
-	char *addr;
-	struct timespec half_sec;
-
-	half_sec.tv_nsec = 500000000;
-	prev = NULL;
-	add_target = argz_next(arguments->argz, arguments->argz_len, prev);
-	prev = add_target;
-	while(addr = argz_next(arguments->argz, arguments->argz_len, prev)){
-		// add a node
-		if(strcmp(add_target, "node") == 0){
-			client_add_node(addr);
-		}
-		else{
-			break;
-		}
-		prev = addr;
-		nanosleep(&half_sec, NULL); //updating conf files and restarting corosync takes some time, so we sleep between executions
-	}
-}
-
-void client_remove_option(struct arguments *arguments)
-{
-	int err;
-	char *remove_target;
-	const char *prev;
-	char *addr;
-	struct timespec half_sec;
-
-	half_sec.tv_nsec = 500000000;
-	prev = NULL;
-	remove_target = argz_next(arguments->argz, arguments->argz_len, prev);
-	prev = remove_target;
-	while(addr = argz_next(arguments->argz, arguments->argz_len, prev)){
-		// remove a node
-		if(strcmp(remove_target, "node") == 0){
-			client_remove_node(addr);
-		}
-		else{
-			break;
-		}
-		nanosleep(&half_sec, NULL); //updating conf files and restarting corosync takes some time, so we sleep between executions
-		prev = addr;
-	}
+	char *q_option;
+	char *q_target;
+	uint32_t nodeid;
+	int votes;
 	
-}
-
-void client_eligibity_option(struct arguments *arguments)
-{
-	int err;
-	char *e_target;
-	const char *prev;
-	char *addr;
-	uint32_t id1;
-	struct timespec half_sec;
-	
-	half_sec.tv_nsec = 500000000;
 	prev = NULL;
-	e_target = argz_next(arguments->argz, arguments->argz_len, prev);
-	prev = e_target;
-	while(addr = argz_next(arguments->argz, arguments->argz_len, prev)){
-		// mark eligible
-		if(strcmp(e_target, "mark_eligible") == 0){
-			id1 = (uint32_t)atoi(addr);
-			client_change_eligibility(e_target, &id1);
+	q_option = argz_next(arguments->argz, arguments->argz_len, prev);
+	prev = q_option;
+	while(q_target = argz_next(arguments->argz, arguments->argz_len, prev)){
+		//change votes
+		if(strcmp(q_option, "set_votes") == 0){
+			//get node id
+			nodeid = (uint32_t)atoi(q_target);
+			//get votes
+			q_target = argz_next(arguments->argz, arguments->argz_len, q_target);
+			votes = atoi(q_target);
+			//call client_change_vote
+			client_change_votes(nodeid, votes);
 			break;
 		}
-		// mark ineligible
-		else if(strcmp(e_target, "mark_ineligible") == 0){
-			id1 = (uint32_t)atoi(addr);
-			client_change_eligibility(e_target, &id1);
-			break;
-		}
-		// unknown e_target
-		else{
-			break;
-		}
-		
-		prev = addr;
-		nanosleep(&half_sec, NULL); //updating conf files and restarting corosync takes some time, so we sleep between executions
+		prev = q_target;
 	}
 }
 
+/* the client_X_option() functions run through the list of arguments and route client instructions appropriately*/
+// see client_ssh_command above for the arguments availible
 void client_ssh_option(struct arguments *arguments)
 {
 	int err;
 	char *cmd;
+	char *src_file_name;  
 	const char *prev;
 	char *addr;
 	
+
 	prev = NULL;
+	src_file_name = NULL;
 	cmd = argz_next(arguments->argz, arguments->argz_len, prev);
-	prev = cmd;
+	if(strcmp(cmd, "reset_conf") == 0){
+		src_file_name = argz_next(arguments->argz, arguments->argz_len, cmd);
+		prev = src_file_name;
+	}
+
+	else{
+		prev = cmd;
+	}
 	while(addr = argz_next(arguments->argz, arguments->argz_len, prev)){
-		client_ssh_command(cmd, addr);
+		client_ssh_command(cmd, addr, src_file_name);
 		prev = addr;
 	}
 }
@@ -567,25 +217,19 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 {
 	size_t count;
 	struct arguments *a;
-	
+
 	a = state->input;
 	switch(key){
-	
-	//add_option
-	case 'a':
-		task = add_option;
-		argz_add(&a->argz, &a->argz_len, arg);
-		break;
-			
-	//remove_option
-	case 'r':
-		task = remove_option;
-		argz_add(&a->argz, &a->argz_len, arg);
-		break;
 			
 	//ssh_command
 	case 'c':
 		task = ssh_cmd;
+		argz_add(&a->argz, &a->argz_len, arg);
+		break;
+	
+	//monitor_option
+	case 'm':
+		task = monitor_option;
 		argz_add(&a->argz, &a->argz_len, arg);
 		break;
 			
@@ -601,32 +245,27 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 		argz_add(&a->argz, &a->argz_len, arg);
 		break;
 			
-	//eligibility_option
-	case 'e':
-		task = eligibility_option;
-		argz_add(&a->argz, &a->argz_len, arg);
-		break;
-			
 	//argp stuff
 	case ARGP_KEY_ARG:
 		argz_add(&a->argz, &a->argz_len, arg);
 		break;
-			
+
 	case ARGP_KEY_INIT:
 		a->argz = 0;
 		a->argz_len = 0;
 		break;
 			
-	//Argument limit (currently 5)
+	//Argument limit
 	case ARGP_KEY_END:
 		count = argz_count(a->argz, a->argz_len);
-		if(count > 5){
+		if(count > 8){
 			argp_failure(state, 1, 0, "too many arguments");
 		}
-		else if(count < 2){
+		else if(count < 1){
 			argp_failure(state, 1, 0, "too few arguments");
 		}
 		break;
+			
 	}
 	return 0;
 }
@@ -634,43 +273,38 @@ static int parse_opt(int key, char *arg, struct argp_state *state)
 int main(int argc, char **argv)
 {
 	struct argp_option options[]={
-		{"add", 'a', "<cluster_option> <node-ip-addr>", 0, "adds a cluster option (usually a node) to the cluster."},
-		{"remove", 'r', "<cluster_option> <node-ip-addr>", 0, "removes a cluster option (usually a node) from the cluster."},
 		{"command", 'c', "<ssh-command> <node-ip-addr>", 0, "uses ssh to remotely execute command at target node in the cluster."},
-		{"print", 'p', "<corosync-item>", 0, "prints the status of corosync target item"},
-		{"quorum", 'q', "<quorum-setting>", 0, "changes a quorum setting"},
-		{"eligibility", 'e', "<eligiblity-setting>", 0, "changes a eligibity setting"},
+		{"print", 'p', "-p <quorum/membership>", 0, "prints the status of corosync target item"},
+		{"monitor", 'm',"-m <quorum>", 0, "begins monitoring locally"},
+		{"quorum", 'q', "-q set_votes <nodeid> <votes>", 0, "changes a quorum setting"},
 		{0}
 	};
+	
 	struct argp argp = {options, parse_opt, 0, 0, 0, 0, 0};
 	struct arguments arguments;
 	printf("\n");
 	if(argp_parse(&argp, argc, argv, 0, 0, &arguments) == 0){
 		switch(task){
-			
-			case add_option:
-				client_add_option(&arguments);
-				break;
-			
-			case remove_option:
-				client_remove_option(&arguments);
-				break;
-			
+				
 			case ssh_cmd:
 				client_ssh_option(&arguments);
 				break;
 			
+			case monitor_option:
+				client_monitor_option(&arguments);
+				break;
+				
 			case print_option:
 				client_print_option(&arguments);
 				break;
-			
+				
 			case quorum_option:
 				client_quorum_option(&arguments);
 				break;
-			
-			case eligibility_option:
-				client_eligibity_option(&arguments);
-				break;
+				
+			default:
+				printf("unrecognized corosync-client command\n");
+				
 		}
 		free(arguments.argz);
 	}
