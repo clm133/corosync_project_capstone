@@ -2,6 +2,9 @@
 ## How to
 * Under 'File' menu, you can import/export a VirtualBox appliance file which can contain one or many VM images
 
+## Appliance Final (12.9)
+### Download here: https://drive.google.com/open?id=0B4lfLgChvxq8anprOWxjdXNJVWc
+
 ## Appliance 10/10
 ### Download here: https://drive.google.com/open?id=0B4lfLgChvxq8OXBBSm1fMW1oNkE
 * This contains 5 VMs, 1 client and 4 nodes. 
@@ -17,4 +20,4 @@
 * root ssh keys have been generated and have been shared among all the nodes.
 
 ## Appliance 12.3
-https://drive.google.com/file/d/0B4lfLgChvxq8QndnQ202SlBNUVk/view?usp=sharing
+### Download here: https://drive.google.com/file/d/0B4lfLgChvxq8QndnQ202SlBNUVk/view?usp=sharing
